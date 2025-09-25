@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LuxBid - Pelelangan Online Kelas Atas</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+   
+    <nav id="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>Auctio<span>Nation</span></h2>
+            </div>
+            <div class="nav-menu">
+                <a href="#beranda" class="nav-link active">Beranda</a>
+                <a href="#myitems" class="nav-link">My Items</a>
+                <a href="#mybid" class="nav-link">My Bid</a>
+                <a href="#wishlist" class="nav-link">Wishlist</a>
+            </div>
+            <div class="nav-user">
+                <span id="username-display">Guest</span>
+                
+                <label class="theme-toggle">
+                    <input type="checkbox" id="theme-toggle">
+                    <span class="toggle-slider round"></span>
+                </label>
+                
+                <button id="login-btn" class="btn-login">Login</button>
+            </div>
+        </div>
+    </nav>
+
+    <!--Login -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Masuk ke AuctioNation</h2>
+            <form id="login-form">
+                <div class="input-group">
+                    <input type="text" id="username" placeholder="Masukkan username" required>
+                </div>
+                <button type="submit" class="btn-primary">Masuk</button>
+            </form>
+        </div>
+    </div>
+
+    
+    <main>
+      
+        <section id="beranda" class="section active">
+            <div class="section-header">
+                <h1>Barang Eksklusif yang Sedang Dilelang</h1>
+                <p>Temukan barang-barang mewah dan langka dari kolektor ternama</p>
+            </div>
+            <div class="items-grid" id="beranda-items">
+       
+            </div>
+        </section>
+
+        <section id="myitems" class="section">
+            <div class="section-header">
+                <h1>Barang Saya</h1>
+                <p>Kelola barang-barang yang Anda lelang</p>
+                <button id="add-item-btn" class="btn-primary">Tambah Barang Baru</button>
+            </div>
+            
+            <div class="items-grid" id="my-items-container">
+             
+            </div>
+        </section>
+
+        <section id="mybid" class="section">
+            <div class="section-header">
+                <h1>Riwayat Bid Saya</h1>
+                <p>Lihat semua tawaran yang telah Anda lakukan</p>
+            </div>
+            <div class="bid-history" id="bid-history-container">
+        
+            </div>
+        </section>
+
+        <section id="wishlist" class="section">
+            <div class="section-header">
+                <h1>Wishlist Saya</h1>
+                <p>Barang-barang yang Anda simpan untuk ditawar nanti</p>
+            </div>
+            <div class="items-grid" id="wishlist-container">
+            
+            </div>
+        </section>
+    </main>
+
+    <div id="add-item-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Tambah Barang Baru</h2>
+            <form id="add-item-form">
+                <div class="input-group">
+                    <input type="text" id="item-name" placeholder="Nama Barang" required>
+                </div>
+                <div class="input-group">
+                    <input type="number" id="item-price" placeholder="Harga Awal" required>
+                </div>
+                <div class="input-group">
+                    <textarea id="item-description" placeholder="Deskripsi Barang" rows="4" required></textarea>
+                </div>
+                <div class="input-group">
+                    <label for="item-image">Unggah Gambar Barang</label>
+                    <input type="file" id="item-image" accept="image/*" required>
+                </div>
+                <button type="submit" class="btn-primary">Tambah Barang</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="item-detail-modal" class="modal">
+        <div class="modal-content item-detail">
+      
+        </div>
+    </div>
+
+    <div id="bid-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="bid-item-name">Tawar Barang</h2>
+            <div class="current-bid">
+                <p>Harga saat ini: <span id="current-bid-value">Rp 0</span></p>
+                <p>Bid tertinggi oleh: <span id="current-bidder">-</span></p>
+            </div>
+            <form id="bid-form">
+                <input type="hidden" id="bid-item-id">
+                <div class="input-group">
+                    <input type="number" id="bid-amount" placeholder="Masukkan jumlah tawaran" required>
+                </div>
+                <button type="submit" class="btn-primary">Ajukan Tawaran</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -9,18 +9,19 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Loader -->
+    
     <div class="loader" id="loader">
         <div class="loader-spinner"></div>
     </div>
 
-    <!-- Login Page -->
     <div class="login-container" id="loginPage">
         <div class="login-box">
             <div class="login-header">
                 <h1>AuctioNation</h1>
                 <p>Premium Online Auction House</p>
             </div>
+            
+            <!-- User Login Form -->
             <form id="loginForm" class="login-form">
                 <div class="form-group">
                     <label class="form-label">Email</label>
@@ -34,16 +35,66 @@
                     </div>
                 </div>
                 <button type="submit" class="btn-login">
-                    <i class="fas fa-sign-in-alt"></i> Masuk
+                    <i class="fas fa-sign-in-alt"></i> Masuk Sebagai User
                 </button>
                 <div class="login-footer">
                     <p>Belum punya akun? <a href="#" id="showRegister">Daftar</a></p>
                 </div>
             </form>
+            
+            <!-- Admin Login Divider -->
+            <div class="login-divider">
+                <span>Atau</span>
+            </div>
+            
+            <!-- Admin Login Form -->
+            <form id="adminLoginForm" class="login-form">
+                <div class="form-group">
+                    <label class="form-label"><i class="fas fa-shield-alt"></i> Admin ID</label>
+                    <input type="password" class="form-input" id="adminIdInput" placeholder="Masukkan Admin ID" autocomplete="off">
+                </div>
+                <button type="submit" class="btn-login btn-admin">
+                    <i class="fas fa-key"></i> Masuk Sebagai Admin
+                </button>
+            </form>
         </div>
     </div>
 
-    <!-- Register Form -->
+<div class="modal" id="successModal">
+  <div class="modal-content success-content">
+    <div class="transaction-success-card">
+      
+      <div class="success-item-image">
+        <img id="successItemImage" src="" alt="Barang Lelang">
+        <div class="success-checkmark">
+          <i class="fas fa-check"></i>
+        </div>
+      </div>
+
+      
+      <h2 class="success-title">Selesai Membeli</h2>
+
+      
+      <p id="successItemTitle" class="success-item-name">Nama Barang</p>
+
+      
+      <div class="success-price">
+        <span id="successItemPrice">Rp 0</span>
+      </div>
+
+      
+      <div class="success-actions">
+        <button class="btn btn-secondary" onclick="viewTransaction()">
+          <i class="fas fa-receipt"></i> Lihat Struk
+        </button>
+        <button class="btn btn-primary" onclick="closeSuccessModal()">
+          <i class="fas fa-home"></i> Kembali ke Beranda
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+    
     <div class="login-container" id="registerPage" style="display: none;">
         <div class="login-box">
             <div class="login-header">
@@ -76,12 +127,17 @@
         </div>
     </div>
 
-    <!-- Main Content (Initially Hidden) -->
-    <div id="mainContent" style="display: none;">
-        <!-- Navigation -->
+        <div id="mainContent" style="display: none;">
+    
         <nav>
             <div class="nav-container">
-                <div class="logo">AuctioNation </div>
+                <div class="logo-section">
+                    <img src="logo final.png" alt="AuctioNation Logo" class="logo-icon" id="adminAccessLogo" title="Click untuk akses admin">
+                    <div class="logo">AuctioNation</div>
+                </div>
+                <button class="sidebar-toggle" id="sidebarToggle" style="display:none; background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">
+                    <i class="fas fa-bars"></i>
+                </button>
                 <ul class="nav-menu">
                     <li><a href="#" class="nav-link active" data-page="home">
                         <i class="fas fa-home"></i> Beranda
@@ -102,21 +158,47 @@
                         <i class="fas fa-heart"></i> Wishlist
                         <span class="wishlist-badge" id="wishlistBadge">0</span>
                     </a></li>
+                    <li style="display:none;"><a href="#" class="nav-link" id="adminLink" data-page="admin">
+                        <i class="fas fa-user-shield"></i> Admin
+                    </a></li>
                 </ul>
             </div>
         </nav>
 
         <div class="container">
-            <!-- Home Page -->
+            
             <div class="page active" id="homePage">
                 <div class="page-header">
                     <h1 class="page-title">Koleksi Eksklusif</h1>
                     <p class="page-subtitle">Temukan Karya Seni & Barang Antik Terbaik</p>
                 </div>
-                <div class="auction-grid" id="auctionGrid"></div>
+            
+                <div class="home-wrapper">
+                  
+                    <aside class="category-sidebar">
+                        <div class="sidebar-header">
+                            <h3><i class="fas fa-filter"></i> Kategori</h3>
+                            <button class="sidebar-close" id="sidebarClose">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div class="sidebar-content">
+                            <div class="category-list" id="sidebarCategories">
+                   
+                            </div>
+                        </div>
+                    </aside>
+
+                    <div class="home-content">
+                        <div class="category-filters" id="categoryFilters">
+ 
+                        </div>
+                        <div class="auction-grid" id="auctionGrid"></div>
+                    </div>
+                </div>
             </div>
 
-            <!-- MyBid Page -->
+            
             <div class="page" id="mybidPage">
                 <div class="page-header">
                     <h1 class="page-title">Riwayat Penawaran Saya</h1>
@@ -125,7 +207,7 @@
                 <div class="bid-history" id="bidHistory"></div>
             </div>
 
-            <!-- MyItem Page -->
+            
             <div class="page" id="myitemPage">
                 <div class="page-header">
                     <h1 class="page-title">Tambahkan Barang Lelang</h1>
@@ -136,6 +218,27 @@
                         <div class="form-group">
                             <label class="form-label">Nama Barang</label>
                             <input type="text" class="form-input" id="itemName" required placeholder="Contoh: Lukisan Van Gogh Original">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Kategori (pilih satu atau lebih)</label>
+                            <div class="category-options">
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Seni"> Seni</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Antik"> Antik</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Jam Tangan"> Jam Tangan</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Permadani"> Permadani</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Kaligrafi"> Kaligrafi</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Kendaraan Lain"> Kendaraan Lain</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Barang Antik"> Barang Antik</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Vas"> Vas</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Aksesoris"> Aksesoris</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Mobil Bekas"> Mobil Bekas</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Motor Bekas"> Motor Bekas</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Perabotan"> Perabotan</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Lukisan 90s"> Lukisan 90s</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Barang Elektronik"> Barang Elektronik</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Permata"> Permata</label>
+                                <label class="form-label"><input type="checkbox" class="item-category-checkbox" value="Random"> Random</label>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Gambar Barang</label>
@@ -153,6 +256,23 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Harga Awal (Rp)</label>
+                
+                <div class="modal" id="adminLoginModal">
+                    <div class="modal-content">
+                        <h2 class="modal-header">Admin Access Verification</h2>
+                        <div class="modal-body">
+                            <p style="color: var(--warm-gray); margin-bottom: 1rem; text-align: center;">Masukkan ID Admin untuk mengakses panel admin</p>
+                            <div class="form-group">
+                                <label class="form-label">Admin ID</label>
+                                <input type="password" class="form-input" id="adminId" placeholder="Masukkan ID Admin khusus">
+                            </div>
+                        </div>
+                        <div class="modal-actions">
+                            <button class="btn btn-cancel" onclick="closeAdminLoginModal()">Batal</button>
+                            <button class="btn btn-primary" onclick="verifyAdminId()">Verifikasi</button>
+                        </div>
+                    </div>
+                </div>
                             <input type="number" class="form-input" id="itemPrice" required min="0" placeholder="1000000">
                         </div>
                         <div class="form-group">
@@ -166,7 +286,7 @@
                 </div>
             </div>
 
-            <!-- Wishlist Page -->
+            
             <div class="page" id="wishlistPage">
                 <div class="page-header">
                     <h1 class="page-title">Wishlist Saya</h1>
@@ -175,7 +295,7 @@
                 <div class="auction-grid" id="wishlistGrid"></div>
             </div>
 
-            <!-- Profile Page -->
+            
             <div class="page" id="profilePage">
                 <div class="page-header">
                     <h1 class="page-title">Profil Saya</h1>
@@ -235,7 +355,7 @@
             </div>
         </div>
 
-        <!-- Bid Modal -->
+        
         <div class="modal" id="bidModal">
             <div class="modal-content">
                 <h2 class="modal-header">Pasang Penawaran</h2>
@@ -255,47 +375,19 @@
             </div>
         </div>
 
-        <!-- Item Detail Modal -->
-        <div class="modal" id="itemDetailModal">
-            <div class="modal-content modal-large">
-                <div class="modal-header">
-                    <h2 class="item-title" id="detailItemTitle">Nama Barang</h2>
-                    <button class="modal-close" onclick="closeItemDetail()">
-                        <i class="fas fa-times"></i>
-                    </button>
+        
+        <div class="modal" id="itemDetailModal" onclick="if(event.target === this) closeDetailModal()">
+
+        </div>
+
+            
+            <div class="page" id="adminPage">
+                <div class="page-header">
+                    <h1 class="page-title">Admin Panel</h1>
+                    <p class="page-subtitle">Kelola data pelelang — Hapus barang yang tidak penting</p>
                 </div>
-                <div class="item-detail-content">
-                    <div class="item-detail-image">
-                        <img id="detailItemImage" src="" alt="Item Image">
-                    </div>
-                    <div class="item-detail-info">
-                        <div class="detail-section">
-                            <h3><i class="fas fa-tag"></i> Harga Saat Ini</h3>
-                            <p class="detail-price" id="detailItemPrice">Rp 0</p>
-                        </div>
-                        <div class="detail-section">
-                            <h3><i class="fas fa-clock"></i> Sisa Waktu</h3>
-                            <p class="detail-timer" id="detailItemTimer">00:00:00</p>
-                        </div>
-                        <div class="detail-section">
-                            <h3><i class="fas fa-info-circle"></i> Deskripsi</h3>
-                            <p class="detail-description" id="detailItemDescription"></p>
-                        </div>
-                        <div class="detail-section">
-                            <h3><i class="fas fa-history"></i> Riwayat Bid</h3>
-                            <div class="bid-history-list" id="detailBidHistory">
-                                <!-- Bid history will be populated here -->
-                            </div>
-                        </div>
-                        <div class="detail-actions">
-                            <button class="btn btn-primary btn-bid" onclick="openBidModal()">
-                                <i class="fas fa-gavel"></i> Pasang Bid
-                            </button>
-                            <button class="btn btn-secondary btn-wishlist" onclick="toggleWishlist()">
-                                <i class="fas fa-heart"></i> Tambah ke Wishlist
-                            </button>
-                        </div>
-                    </div>
+                <div class="form-container" id="adminListContainer">
+                    
                 </div>
             </div>
         </div>
@@ -304,5 +396,4 @@
     <script src="auth.js"></script>
     <script src="script.js"></script>
 </body>
-
 </html>

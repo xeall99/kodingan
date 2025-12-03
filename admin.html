@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - AuctioNation</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="admin-header">
+        <div class="header-content">
+            <div class="logo-section">
+                <img src="logo final.png" alt="AuctioNation Logo" class="logo-icon">
+                <h1 class="logo">AuctioNation</h1>
+                <span class="admin-badge">ADMIN PANEL</span>
+            </div>
+            <div class="header-actions">
+                <span class="user-info" id="userInfo">Admin</span>
+                <button class="btn-logout" onclick="logoutAdmin()">Keluar</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+        <nav class="nav-menu">
+            <a href="#" class="nav-item active" data-section="items">
+                <span class="icon">📦</span>
+                <span>Kelola Items</span>
+            </a>
+            <a href="#" class="nav-item" data-section="stats">
+                <span class="icon">📊</span>
+                <span>Statistik</span>
+            </a>
+            <a href="#" class="nav-item" data-section="users">
+                <span class="icon">👥</span>
+                <span>Users</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="admin-main">
+        <!-- Items Management Section -->
+        <section id="items-section" class="section-container active">
+            <div class="section-header">
+                <h2>Kelola Items Barang Lelang</h2>
+                <div class="filter-actions">
+                    <input type="text" id="searchInput" class="search-box" placeholder="Cari barang...">
+                    <select id="statusFilter" class="filter-select">
+                        <option value="">Semua Status</option>
+                        <option value="active">Aktif</option>
+                        <option value="ended">Berakhir</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="items-list" id="itemsList">
+                <!-- Items akan ditampilkan di sini -->
+            </div>
+        </section>
+
+        <!-- Statistics Section -->
+        <section id="stats-section" class="section-container">
+            <div class="section-header">
+                <h2>Statistik Platform</h2>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">📦</div>
+                    <div class="stat-content">
+                        <h3 id="totalItems">0</h3>
+                        <p>Total Items</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-content">
+                        <h3 id="totalBids">0</h3>
+                        <p>Total Bids</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-content">
+                        <h3 id="totalUsers">0</h3>
+                        <p>Total Users</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon">⭐</div>
+                    <div class="stat-content">
+                        <h3 id="activeAuctions">0</h3>
+                        <p>Lelang Aktif</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Users Section -->
+        <section id="users-section" class="section-container">
+            <div class="section-header">
+                <h2>Manajemen Users</h2>
+            </div>
+
+            <div class="users-list" id="usersList">
+                <!-- Users akan ditampilkan di sini -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal untuk Rekomendasi -->
+    <div id="recommendationModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeRecommendationModal()">&times;</span>
+            <h2>📌 Rekomendasi Penempatan Item</h2>
+            
+            <div class="item-summary" id="itemSummary">
+                <!-- Item info akan tampil di sini -->
+            </div>
+
+            <div class="recommendation-section">
+                <h3>💡 Rekomendasi:</h3>
+                <div id="recommendationText" class="recommendation-text">
+                    <!-- Rekomendasi akan tampil di sini -->
+                </div>
+            </div>
+
+            <div class="recommendation-actions">
+                <button class="btn btn-primary" onclick="applyRecommendation()">Terapkan Rekomendasi</button>
+                <button class="btn btn-secondary" onclick="closeRecommendationModal()">Batalkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal untuk Delete Confirmation -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content delete-confirmation">
+            <span class="close" onclick="closeDeleteModal()">&times;</span>
+            <h2>⚠️ Konfirmasi Penghapusan</h2>
+            
+            <div class="delete-warning">
+                <p>Anda yakin ingin menghapus item ini?</p>
+                <p class="item-name" id="deleteItemName"></p>
+                <p class="warning-text">Aksi ini tidak dapat dibatalkan!</p>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-danger" onclick="confirmDelete()">Hapus Sekarang</button>
+                <button class="btn btn-secondary" onclick="closeDeleteModal()">Batalkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script src="admin.js"></script>
+</body>
+</html>

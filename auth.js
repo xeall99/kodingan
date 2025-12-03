@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showMainContent();
     } else if (isAdminLoggedIn) {
         setAdminUser(); // Restore admin on page load
-        showMainContent();
+        // Don't show main content, wait for next action
     }
 
     // USER LOGIN
@@ -143,6 +143,11 @@ document.getElementById('profilePhoto').addEventListener('change', function(e) {
 function setAdminUser() {
     currentUser = 'ADMIN';
     isAdmin = true;
+    localStorage.setItem('isAdminLoggedIn', 'true');
+    localStorage.setItem('adminName', 'Admin');
+    
+    // Show main content untuk akses logo
+    showMainContent();
 }
 
 // Load profile data

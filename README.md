@@ -46,7 +46,8 @@ auctionation/
 5. Buat Pull Request
 
 ## Tim Pengembang
-- Akmal Maulana G
-- Syahdan AL FPS
+- [Nama Anda](https://github.com/username)
+- [Anggota Tim 2](https://github.com/username2)
 
-
+## Lisensi
+MIT License

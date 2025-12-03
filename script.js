@@ -112,6 +112,80 @@ auctionItems.forEach(item => {
     item.soldNotified = false;
 });
 
+// ============ ADMIN ACCESS SETUP ============
+function setupAdminLogoAccess() {
+    const adminLogo = document.getElementById('adminAccessLogo');
+    
+    if (adminLogo) {
+        // Check if user is admin
+        const isAdminLoggedIn = localStorage.getItem('isAdminLoggedIn') === 'true';
+        
+        if (isAdminLoggedIn && isAdmin) {
+            // Admin user - enable click access
+            adminLogo.style.cursor = 'pointer';
+            adminLogo.style.opacity = '1';
+            adminLogo.style.transition = 'transform 0.3s ease, filter 0.3s ease';
+            adminLogo.title = '🔐 Click untuk masuk ke Admin Panel';
+            
+            // Add hover effect for admin
+            adminLogo.addEventListener('mouseenter', () => {
+                adminLogo.style.transform = 'scale(1.1)';
+                adminLogo.style.filter = 'drop-shadow(0 0 8px rgba(241, 79, 79, 0.6))';
+            });
+            
+            adminLogo.addEventListener('mouseleave', () => {
+                adminLogo.style.transform = 'scale(1)';
+                adminLogo.style.filter = 'drop-shadow(none)';
+            });
+        } else {
+            // Regular user - disable click
+            adminLogo.style.cursor = 'default';
+            adminLogo.style.opacity = '0.6';
+            adminLogo.title = '👤 Hanya admin yang bisa akses admin panel';
+        }
+        
+        adminLogo.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Check if user is admin
+            const isAdminLoggedIn = localStorage.getItem('isAdminLoggedIn') === 'true';
+            
+            if (isAdminLoggedIn && isAdmin) {
+                // Redirect to admin panel
+                window.location.href = 'admin.html';
+            } else {
+                // Not admin, show error message
+                showAlert('❌ Hanya admin yang dapat mengakses admin panel!', 'error');
+            }
+        });
+    }
+}
+
+// ============ PAGE VISIBILITY LISTENER ============
+function setupPageVisibilityListener() {
+    // Sync data saat page kembali dari tab lain (misal dari admin panel)
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            // Page menjadi visible, check if there are changes from admin panel
+            const storedItems = localStorage.getItem('auctionItems');
+            if (storedItems) {
+                try {
+                    const updatedItems = JSON.parse(storedItems);
+                    // Update auctionItems array
+                    auctionItems = updatedItems;
+                    // Re-render items
+                    renderAuctionItems();
+                    renderCategoryFilters();
+                    renderSidebarCategories();
+                } catch (e) {
+                    console.error('Error syncing items:', e);
+                }
+            }
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     showLoader();
     setTimeout(() => {
@@ -122,6 +196,12 @@ document.addEventListener('DOMContentLoaded', function() {
         startTimers();
         startEndedChecker();
         setupSidebarToggle();
+        
+        // Setup admin logo access
+        setupAdminLogoAccess();
+        
+        // Setup page visibility listener untuk sync data saat kembali dari admin panel
+        setupPageVisibilityListener();
         
         // Initialize liquid scroll animation
         initLiquidScroll();
@@ -949,7 +1029,6 @@ function renderAdminPanel() {
     });
 }
 
-// Set currentUser after successful login
 function setCurrentUser(email) {
     currentUser = {
         email: email,

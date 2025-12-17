@@ -14,13 +14,10 @@
         <div class="loader-spinner"></div>
     </div>
 
-    <div class="login-container" id="loginPage">
+    <div class="login-container" id="loginPage" style="display:none;">
         <div class="login-box">
             <div class="login-header">
-                <div class="logo-header">
-                    <img src="logo final.png" alt="AuctioNation Logo" class="header-logo">
-                    <h1>AuctioNation</h1>
-                </div>
+                <h1>AuctioNation</h1>
                 <p>Premium Online Auction House</p>
             </div>
             
@@ -40,18 +37,21 @@
                 <button type="submit" class="btn-login">
                     <i class="fas fa-sign-in-alt"></i> Masuk Sebagai User
                 </button>
+                <div style="margin-top:6px; text-align:center;">
+                    <a href="#" id="forgotPasswordLink" style="font-size:0.95rem; color:var(--maroon);">Lupa password?</a>
+                </div>
                 <div class="login-footer">
                     <p>Belum punya akun? <a href="#" id="showRegister">Daftar</a></p>
                 </div>
             </form>
             
-            <!-- Admin Login Divider -->
-            <div class="login-divider">
+            <!-- Admin Login Divider (hidden by default) -->
+            <div class="login-divider hidden" style="display:none;">
                 <span>Atau</span>
             </div>
             
-            <!-- Admin Login Form -->
-            <form id="adminLoginForm" class="login-form">
+            <!-- Admin Login Form (kept for fallback but hidden; access via secret logo below) -->
+            <form id="adminLoginForm" class="login-form" style="display:none;">
                 <div class="form-group">
                     <label class="form-label"><i class="fas fa-shield-alt"></i> Admin ID</label>
                     <input type="password" class="form-input" id="adminIdInput" placeholder="Masukkan Admin ID" autocomplete="off">
@@ -60,6 +60,11 @@
                     <i class="fas fa-key"></i> Masuk Sebagai Admin
                 </button>
             </form>
+
+            <!-- Hidden admin access logo (secret) -->
+            <div class="admin-secret" style="text-align:center; margin-top:0.5rem;">
+                <img src="logo final.png" alt="Admin Access (rahasia)" id="adminSecretLogo" class="admin-secret-logo" title="Klik (rahasia) untuk akses admin">
+            </div>
         </div>
     </div>
 
@@ -97,6 +102,90 @@
     </div>
   </div>
 </div>
+
+<!-- Notifications Modal -->
+<div id="notificationsModal" class="modal">
+    <div class="modal-content">
+        <button class="close" aria-label="Tutup notifikasi" onclick="document.getElementById('notificationsModal').classList.remove('active')">&times;</button>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h2>Notifikasi</h2>
+            <button class="btn btn-secondary" onclick="markAllRead()">Tandai Semua Dibaca</button>
+        </div>
+        <div id="notificationsList">Memuat notifikasi...</div>
+    </div>
+</div>
+
+<!-- Admin Access Modal (top-level so it can be opened from any page) -->
+<div class="modal" id="adminLoginModal">
+    <div class="modal-content">
+        <h2 class="modal-header">Admin Access Verification</h2>
+        <div class="modal-body">
+            <p style="color: var(--warm-gray); margin-bottom: 1rem; text-align: center;">Masukkan ID Admin untuk mengakses panel admin</p>
+            <div class="form-group">
+                <label class="form-label">Admin ID</label>
+                <input type="password" class="form-input" id="adminId" placeholder="Masukkan ID Admin khusus">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeAdminLoginModal()">Batal</button>
+            <button class="btn btn-primary" onclick="verifyAdminId()">Verifikasi</button>
+        </div>
+    </div>
+</div>
+
+<!-- Login Choice Modal -->
+<div class="modal" id="loginChoiceModal" role="dialog" aria-modal="true" aria-labelledby="loginChoiceTitle" aria-describedby="loginChoiceDesc">
+    <div class="modal-content">
+        <h2 class="modal-header" id="loginChoiceTitle">Perlu Login</h2>
+        <div class="modal-body">
+            <p id="loginChoiceDesc" style="color:var(--warm-gray); margin-bottom:1rem; text-align:center;">Anda perlu login dulu untuk melakukan aksi ini. Mau login sekarang?</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeLoginChoiceModal()">Tidak</button>
+            <button class="btn btn-primary" onclick="proceedToLoginFromChoice()">Login</button>
+        </div>
+    </div>
+</div>
+
+<!-- Forgot Password Modal -->
+<div class="modal" id="forgotPasswordModal">
+    <div class="modal-content">
+        <h2 class="modal-header">Lupa Password</h2>
+        <div class="modal-body">
+            <p style="color: var(--warm-gray); margin-bottom: 1rem; text-align: center;">Masukkan email yang terdaftar. Kami akan mengirimkan instruksi reset.</p>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" id="forgotEmail" placeholder="email@domain.com">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeForgotPasswordModal()">Batal</button>
+            <button class="btn btn-primary" onclick="submitForgotPassword()">Kirim</button>
+        </div>
+    </div>
+</div>
+
+<!-- Reset Password Modal (enter email + new password) -->
+<div class="modal" id="resetPasswordModal">
+    <div class="modal-content">
+        <h2 class="modal-header">Reset Password</h2>
+        <div class="modal-body">
+            <p style="color: var(--warm-gray); margin-bottom: 1rem; text-align: center;">Masukkan email Anda dan password baru.</p>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-input" id="resetEmailInput" placeholder="email@domain.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password Baru</label>
+                <input type="password" class="form-input" id="resetNewPassword" placeholder="Password baru">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-cancel" onclick="closeResetPasswordModal()">Batal</button>
+            <button class="btn btn-primary" onclick="submitResetPassword()">Reset</button>
+        </div>
+    </div>
+</div>
     
     <div class="login-container" id="registerPage" style="display: none;">
         <div class="login-box">
@@ -130,7 +219,7 @@
         </div>
     </div>
 
-        <div id="mainContent" style="display: none;">
+        <div id="mainContent">
     
         <nav>
             <div class="nav-container">
@@ -138,10 +227,16 @@
                     <img src="logo final.png" alt="AuctioNation Logo" class="logo-icon" id="adminAccessLogo" title="Click untuk akses admin">
                     <div class="logo">AuctioNation</div>
                 </div>
-                <button class="sidebar-toggle" id="sidebarToggle" style="display:none; background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">
+                <button class="sidebar-toggle" id="sidebarToggle" aria-expanded="false" aria-controls="sidebarCategories" style="display:none; background:none; border:none; color:white; font-size:1.2rem; cursor:pointer;">
                     <i class="fas fa-bars"></i>
                 </button>
-                <ul class="nav-menu">
+                <!-- Mobile nav toggle (shows nav menu on small screens) -->
+                <button class="mobile-nav-toggle" id="mobileNavToggle" aria-expanded="false" aria-controls="mainNav" style="display:none; background:none; border:none; color:white; font-size:1.2rem; cursor:pointer; margin-left:8px;">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <ul class="nav-menu" id="mainNav">
+
+
                     <li><a href="#" class="nav-link active" data-page="home">
                         <i class="fas fa-home"></i> Beranda
                     </a></li>
@@ -154,12 +249,17 @@
                     <li><a href="#" class="nav-link" data-page="profile">
                         <i class="fas fa-user"></i> Profil
                     </a></li>
+
                     <li><a href="#" class="nav-link" onclick="logout()">
                         <i class="fas fa-sign-out-alt"></i> Keluar
                     </a></li>
                     <li><a href="#" class="nav-link" data-page="wishlist">
                         <i class="fas fa-heart"></i> Wishlist
                         <span class="wishlist-badge" id="wishlistBadge">0</span>
+                    </a></li>
+                    <li><a href="#" class="nav-link" id="notifLink" onclick="openNotificationsModal()">
+                        <i class="fas fa-bell"></i> Notifikasi
+                        <span class="wishlist-badge" id="notifBadge">0</span>
                     </a></li>
                     <li style="display:none;"><a href="#" class="nav-link" id="adminLink" data-page="admin">
                         <i class="fas fa-user-shield"></i> Admin
@@ -209,6 +309,8 @@
                 </div>
                 <div class="bid-history" id="bidHistory"></div>
             </div>
+            
+
 
             
             <div class="page" id="myitemPage">
@@ -259,23 +361,6 @@
                         </div>
                         <div class="form-group">
                             <label class="form-label">Harga Awal (Rp)</label>
-                
-                <div class="modal" id="adminLoginModal">
-                    <div class="modal-content">
-                        <h2 class="modal-header">Admin Access Verification</h2>
-                        <div class="modal-body">
-                            <p style="color: var(--warm-gray); margin-bottom: 1rem; text-align: center;">Masukkan ID Admin untuk mengakses panel admin</p>
-                            <div class="form-group">
-                                <label class="form-label">Admin ID</label>
-                                <input type="password" class="form-input" id="adminId" placeholder="Masukkan ID Admin khusus">
-                            </div>
-                        </div>
-                        <div class="modal-actions">
-                            <button class="btn btn-cancel" onclick="closeAdminLoginModal()">Batal</button>
-                            <button class="btn btn-primary" onclick="verifyAdminId()">Verifikasi</button>
-                        </div>
-                    </div>
-                </div>
                             <input type="number" class="form-input" id="itemPrice" required min="0" placeholder="1000000">
                         </div>
                         <div class="form-group">
@@ -308,7 +393,7 @@
                     <form id="profileForm" class="profile-form">
                         <div class="profile-photo-section">
                             <div class="profile-photo">
-                                <img id="profilePhotoPreview" src="default-avatar.png" alt="Profile Photo">
+                                <img id="profilePhotoPreview" src="default-avatar.jpg" alt="Profile Photo">
                                 <div class="photo-upload">
                                     <label for="profilePhoto">
                                         <i class="fas fa-camera"></i>
@@ -396,7 +481,7 @@
         </div>
     </div>
 
-    <script src="auth.js"></script>
     <script src="script.js"></script>
+    <script src="auth.js"></script>   
 </body>
 </html>

@@ -1,4 +1,3 @@
-// ============ GLOBAL STATE ============
 const adminState = {
     items: [],
     users: [],
@@ -9,7 +8,9 @@ const adminState = {
     statusFilter: ''
 };
 
-// ============ INITIALIZATION ============
+const ADMIN_ID = 'ADMIN-12345';
+
+// INITIALIZATION
 document.addEventListener('DOMContentLoaded', () => {
     initializeAdmin();
     loadItemsData();
@@ -38,7 +39,7 @@ function displayUserInfo() {
     userInfo.textContent = `Halo, ${adminName} 👋`;
 }
 
-// ============ EVENT LISTENERS ============
+// EVENT LISTENERS
 function setupEventListeners() {
     // Navigation
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -50,18 +51,24 @@ function setupEventListeners() {
     });
 
     // Search and Filter
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-        adminState.searchQuery = e.target.value.toLowerCase();
-        renderItems();
-    });
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            adminState.searchQuery = e.target.value.toLowerCase();
+            renderItems();
+        });
+    }
 
-    document.getElementById('statusFilter').addEventListener('change', (e) => {
-        adminState.statusFilter = e.target.value;
-        renderItems();
-    });
+    const statusFilter = document.getElementById('statusFilter');
+    if (statusFilter) {
+        statusFilter.addEventListener('change', (e) => {
+            adminState.statusFilter = e.target.value;
+            renderItems();
+        });
+    }
 }
 
-// ============ SECTION NAVIGATION ============
+// SECTION NAVIGATION
 function switchSection(sectionName) {
     // Hide all sections
     document.querySelectorAll('.section-container').forEach(section => {
@@ -81,21 +88,70 @@ function switchSection(sectionName) {
     }
 
     // Add active to clicked nav item
-    document.querySelector(`[data-section="${sectionName}"]`).classList.add('active');
+    const navItem = document.querySelector(`[data-section="${sectionName}"]`);
+    if (navItem) {
+        navItem.classList.add('active');
+    }
 
     // Load data if needed
     if (sectionName === 'stats') {
         loadStatistics();
     } else if (sectionName === 'users') {
         loadUsersData();
+    } else if (sectionName === 'items') {
+        loadItemsData();
+        renderItems();
     }
 }
 
-// ============ ITEMS MANAGEMENT ============
-function loadItemsData() {
-    // Try to get items dari window.auctionItems (jika admin.html opened dari main app)
+// ITEMS MANAGEMENT
+async function loadItemsData() {
+    try {
+        const res = await fetch('/api/items', {
+            headers: { 'x-admin-id': ADMIN_ID }
+        });
+        
+        if (!res.ok) {
+            console.warn('Fetch items from API failed, using localStorage');
+            loadItemsFromStorage();
+            return;
+        }
+
+        const data = await res.json();
+        // Accept both formats: array or { items: [...] }
+        if (Array.isArray(data)) {
+            adminState.items = data;
+        } else {
+            adminState.items = data.items || [];
+        }
+
+        // normalize minimal fields if server uses different names
+        adminState.items = adminState.items.map(it => ({
+            id: it.id,
+            name: it.name || it.title || 'Unnamed',
+            image: it.image || it.img || it.photo || '',
+            description: it.description || it.desc || '',
+            price: Number(it.price || it.currentBid || it.initialPrice || 0),
+            currentBid: Number(it.currentBid || it.price || 0),
+            endTime: it.endTime || it.endsAt || new Date(Date.now() + 24*60*60*1000).toISOString(),
+            seller: it.sellerName || it.seller || 'Penjual',
+            sellerId: it.sellerId || it.seller_id || it.sellerId,
+            sellerRating: it.sellerRating || 0,
+            categories: Array.isArray(it.categories) ? it.categories : (it.categories ? JSON.parse(it.categories || '[]') : []),
+            status: it.status || 'active',
+            isRecommended: !!it.isRecommended
+        }));
+
+        renderItems();
+    } catch (err) {
+        console.error('Load items error:', err);
+        loadItemsFromStorage();
+    }
+}
+
+function loadItemsFromStorage() {
     if (window.auctionItems && Array.isArray(window.auctionItems)) {
-        adminState.items = JSON.parse(JSON.stringify(window.auctionItems)); // Deep copy
+        adminState.items = JSON.parse(JSON.stringify(window.auctionItems));
     } else {
         // Otherwise try localStorage
         const storedItems = localStorage.getItem('auctionItems');
@@ -112,63 +168,15 @@ function loadItemsData() {
     }
 }
 
-function getSampleItems() {
-    return [
-        {
-            id: 1,
-            name: "Lukisan Monalisa Replica",
-            image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600",
-            description: "Replika sempurna dari masterpiece Leonardo da Vinci",
-            currentBid: 25000000,
-            initialPrice: 25000000,
-            endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-            seller: "Gallery Renaissance",
-            sellerId: "SELL001",
-            sellerPhone: "082112345678",
-            sellerRating: 4.8,
-            categories: ["Seni", "Lukisan"],
-            status: "active"
-        },
-        {
-            id: 2,
-            name: "Vas Keramik Dinasti Ming",
-            image: "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=600",
-            description: "Vas antik dari Dinasti Ming dengan desain bunga",
-            currentBid: 150000000,
-            initialPrice: 150000000,
-            endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-            seller: "Asian Antiquities",
-            sellerId: "SELL002",
-            sellerPhone: "081987654321",
-            sellerRating: 4.6,
-            categories: ["Antik", "Vas"],
-            status: "active"
-        },
-        {
-            id: 3,
-            name: "Jam Tangan Rolex Vintage",
-            image: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?w=600",
-            description: "Jam tangan Rolex Submariner tahun 1960an",
-            currentBid: 85000000,
-            initialPrice: 85000000,
-            endTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-            seller: "Luxury Watch Collection",
-            sellerId: "SELL003",
-            sellerPhone: "082456789012",
-            sellerRating: 4.9,
-            categories: ["Jam Tangan", "Vintage"],
-            status: "ended"
-        }
-    ];
-}
-
 function renderItems() {
     const itemsList = document.getElementById('itemsList');
     
+    if (!itemsList) return;
+
     // Filter items
     let filteredItems = adminState.items.filter(item => {
-        const matchesSearch = item.name.toLowerCase().includes(adminState.searchQuery) ||
-                             item.seller.toLowerCase().includes(adminState.searchQuery);
+        const matchesSearch = (item.name && item.name.toLowerCase().includes(adminState.searchQuery)) ||
+                             (item.seller && item.seller.toLowerCase().includes(adminState.searchQuery));
         const matchesStatus = !adminState.statusFilter || item.status === adminState.statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -203,11 +211,11 @@ function createItemCard(item) {
                         <h3 class="item-name">${item.name}</h3>
                         ${item.isRecommended ? '<span style="background: linear-gradient(135deg, #f59e0b, #fbbf24); color: white; padding: 0.3rem 0.7rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">⭐ TOP</span>' : ''}
                     </div>
-                    <p class="item-seller">📍 ${item.seller}</p>
-                    <p class="item-seller">⭐ Rating: ${item.sellerRating}/5</p>
+                    <p class="item-seller">📍 ${item.seller || 'Unknown'}</p>
+                    <p class="item-time">⏱️ ${timeRemaining}</p>
                 </div>
                 <div>
-                    <p class="item-price">Rp ${formatCurrency(item.currentBid)}</p>
+                    <p class="item-price">Rp ${formatCurrency(item.price)}</p>
                     <span class="item-status ${item.status}">${item.status === 'active' ? '🟢 Aktif' : '⏹️ Berakhir'}</span>
                 </div>
             </div>
@@ -216,7 +224,7 @@ function createItemCard(item) {
                 <button class="btn btn-primary" onclick="openRecommendationModal(${item.id})">
                     💡 Rekomendasi
                 </button>
-                <button class="btn btn-danger" onclick="openDeleteModal(${item.id}, '${item.name}')">
+                <button class="btn btn-danger" onclick="openDeleteModal(${item.id}, '${item.name.replace(/'/g, "\\'")}')">
                     🗑️ Hapus
                 </button>
             </div>
@@ -225,7 +233,7 @@ function createItemCard(item) {
 }
 
 function formatCurrency(value) {
-    return new Intl.NumberFormat('id-ID').format(value);
+    return new Intl.NumberFormat('id-ID').format(value || 0);
 }
 
 function getTimeRemaining(endDate, now) {
@@ -244,50 +252,57 @@ function openDeleteModal(itemId, itemName) {
     adminState.currentDeleteItemId = itemId;
     
     const modal = document.getElementById('deleteModal');
-    document.getElementById('deleteItemName').textContent = `"${itemName}"`;
+    if (!modal) return;
+
+    const deleteItemName = document.getElementById('deleteItemName');
+    if (deleteItemName) {
+        deleteItemName.textContent = `"${itemName}"`;
+    }
     
     modal.classList.add('active');
 }
 
 function closeDeleteModal() {
     const modal = document.getElementById('deleteModal');
+    if (!modal) return;
+
     modal.classList.remove('active');
     adminState.currentDeleteItemId = null;
 }
 
-function confirmDelete() {
+async function confirmDelete() {
     const itemId = adminState.currentDeleteItemId;
     
     if (!itemId) return;
 
-    // Remove from state
-    const itemIndex = adminState.items.findIndex(i => i.id === itemId);
-    if (itemIndex > -1) {
-        const deletedItem = adminState.items.splice(itemIndex, 1)[0];
-        
-        // Save to localStorage
-        localStorage.setItem('auctionItems', JSON.stringify(adminState.items));
-        
-        // Update window.auctionItems jika available
-        if (window.auctionItems && Array.isArray(window.auctionItems)) {
-            const mainAppIndex = window.auctionItems.findIndex(i => i.id === itemId);
-            if (mainAppIndex > -1) {
-                window.auctionItems.splice(mainAppIndex, 1);
-            }
+    try {
+        const res = await fetch(`/api/admin/items/${itemId}`, {
+            method: 'DELETE',
+            headers: { 'x-admin-id': ADMIN_ID }
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            showToast(`❌ ${data.error || 'Gagal menghapus'}`, 'error');
+            return;
         }
-        
-        // Show success message
-        showToast(`✅ Item "${deletedItem.name}" berhasil dihapus`, 'success');
-        
-        // Render items again
+
+        // Remove dari state
+        const itemIndex = adminState.items.findIndex(i => i.id === itemId);
+        if (itemIndex > -1) {
+            const deletedItem = adminState.items.splice(itemIndex, 1)[0];
+            showToast(`✅ Item "${deletedItem.name}" berhasil dihapus`, 'success');
+        }
+
         renderItems();
-        
-        // Close modal
         closeDeleteModal();
+    } catch (err) {
+        console.error('Delete error:', err);
+        showToast(`❌ Gagal menghapus item: ${err.message}`, 'error');
     }
 }
 
-// ============ RECOMMENDATION FUNCTIONALITY ============
+// RECOMMENDATION FUNCTIONALITY
 function openRecommendationModal(itemId) {
     const item = adminState.items.find(i => i.id === itemId);
     
@@ -300,137 +315,149 @@ function openRecommendationModal(itemId) {
 
     // Update modal content
     const itemSummary = document.getElementById('itemSummary');
-    itemSummary.innerHTML = `
-        <h4>${item.name}</h4>
-        <p><strong>Harga Saat Ini:</strong> Rp ${formatCurrency(item.currentBid)}</p>
-        <p><strong>Penjual:</strong> ${item.seller}</p>
-        <p><strong>Status:</strong> ${item.status === 'active' ? 'Aktif' : 'Berakhir'}</p>
-    `;
+    if (itemSummary) {
+        itemSummary.innerHTML = `
+            <h4>${item.name}</h4>
+            <p><strong>Harga Saat Ini:</strong> Rp ${formatCurrency(item.price)}</p>
+            <p><strong>Penjual:</strong> ${item.seller || 'Unknown'}</p>
+            <p><strong>Status:</strong> ${item.status === 'active' ? 'Aktif' : 'Berakhir'}</p>
+        `;
+    }
 
     const recommendationText = document.getElementById('recommendationText');
-    recommendationText.innerHTML = recommendations.map(rec => `<li>${rec}</li>`).join('');
+    if (recommendationText) {
+        recommendationText.innerHTML = recommendations.map(rec => `<li>${rec}</li>`).join('');
+    }
 
     const modal = document.getElementById('recommendationModal');
-    modal.classList.add('active');
+    if (modal) {
+        modal.classList.add('active');
+    }
 }
 
 function closeRecommendationModal() {
     const modal = document.getElementById('recommendationModal');
-    modal.classList.remove('active');
+    if (modal) {
+        modal.classList.remove('active');
+    }
     adminState.currentRecommendationItem = null;
 }
 
 function generateRecommendations(item) {
     const recommendations = [];
 
-    // 1. Kategori rekomendasi
     if (item.categories && item.categories.length > 0) {
-        recommendations.push(`✓ <strong>Tingkatkan Visibilitas:</strong> Item "${item.name}" termasuk kategori ${item.categories.join(', ')}. Pertimbangkan untuk menampilkannya di bagian atas kategori tersebut untuk meningkatkan penjualan.`);
+        recommendations.push(`✓ <strong>Tingkatkan Visibilitas:</strong> Item "${item.name}" termasuk kategori ${item.categories.join(', ')}. Pertimbangkan untuk menampilkannya di bagian atas kategori tersebut.`);
     }
 
-    // 2. Price positioning
-    if (item.currentBid > 50000000) {
-        recommendations.push(`✓ <strong>Premium Item:</strong> Dengan harga Rp ${formatCurrency(item.currentBid)}, item ini cocok untuk premium showcase. Tampilkan di featured section untuk target buyer yang lebih tinggi.`);
+    if (item.price > 50000000) {
+        recommendations.push(`✓ <strong>Premium Item:</strong> Dengan harga Rp ${formatCurrency(item.price)}, item ini cocok untuk premium showcase.`);
     }
 
-    // 3. Rating review
-    if (item.sellerRating >= 4.5) {
-        recommendations.push(`✓ <strong>Seller Terpercaya:</strong> Penjual memiliki rating ${item.sellerRating}/5. Highlight ini untuk meningkatkan kredibilitas item.`);
-    }
 
-    // 4. Status-based
     if (item.status === 'ended') {
-        recommendations.push(`⚠️ <strong>Item Berakhir:</strong> Pertimbangkan untuk mengarsipkan item ini atau menyarankan penjual untuk relisting.`);
+        recommendations.push(`⚠️ <strong>Item Berakhir:</strong> Pertimbangkan untuk mengarsipkan atau relisting item ini.`);
     } else {
         const endDate = new Date(item.endTime);
         const now = new Date();
         const hoursRemaining = Math.floor((endDate - now) / (1000 * 60 * 60));
         
         if (hoursRemaining < 12 && hoursRemaining > 0) {
-            recommendations.push(`⏰ <strong>Waktu Habis Segera:</strong> Lelang berakhir dalam ${hoursRemaining} jam. Pertimbangkan untuk memberikan reminder kepada bidder yang tertarik.`);
+            recommendations.push(`⏰ <strong>Waktu Habis Segera:</strong> Lelang berakhir dalam ${hoursRemaining} jam.`);
         }
-    }
-
-    // 5. Bid activity
-    if (!item.bids || item.bids.length === 0) {
-        recommendations.push(`📊 <strong>Belum Ada Bid:</strong> Item belum mendapat penawaran. Coba turunkan harga awal atau tambahkan deskripsi yang lebih menarik.`);
-    } else {
-        recommendations.push(`✓ <strong>Ada Aktivitas Bid:</strong> Total ${item.bids.length} penawaran masuk. Item ini diminati pembeli.`);
-    }
-
-    // 6. Placement suggestion
-    if (item.sellerRating >= 4.7) {
-        recommendations.push(`⭐ <strong>Top Placement:</strong> Dengan rating sempurna, item ini bisa ditempatkan di home page atau featured auction section untuk maksimum exposure.`);
     }
 
     return recommendations;
 }
 
-function applyRecommendation() {
+async function applyRecommendation() {
     if (!adminState.currentRecommendationItem) return;
 
     const item = adminState.currentRecommendationItem;
-    
-    // Tandai item sebagai "recommended" - pindahkan ke top
-    item.isRecommended = true;
-    item.recommendedDate = new Date();
-    item.recommendedPriority = 1;
 
-    // Move item ke awal array (top)
-    const itemIndex = adminState.items.findIndex(i => i.id === item.id);
-    if (itemIndex > -1) {
-        const [movedItem] = adminState.items.splice(itemIndex, 1);
-        adminState.items.unshift(movedItem);
-    }
+    try {
+        const res = await fetch(`/api/admin/items/${item.id}/recommend`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-id': ADMIN_ID
+            },
+            body: JSON.stringify({ priority: 1 })
+        });
+        const data = await res.json();
 
-    // Save to localStorage
-    localStorage.setItem('auctionItems', JSON.stringify(adminState.items));
-
-    // Update window.auctionItems jika available
-    if (window.auctionItems && Array.isArray(window.auctionItems)) {
-        const mainAppIndex = window.auctionItems.findIndex(i => i.id === item.id);
-        if (mainAppIndex > -1) {
-            const [movedMainItem] = window.auctionItems.splice(mainAppIndex, 1);
-            movedMainItem.isRecommended = true;
-            movedMainItem.recommendedDate = new Date();
-            window.auctionItems.unshift(movedMainItem);
+        if (!res.ok) {
+            showToast(`❌ ${data.error || 'Gagal menerapkan rekomendasi'}`, 'error');
+            return;
         }
+
+        // Update local state
+        item.isRecommended = true;
+        item.recommendedDate = new Date();
+        item.recommendedPriority = 1;
+
+        showToast(`✅ "${item.name}" ditambahkan ke rekomendasi 🌟`, 'success');
+        closeRecommendationModal();
+        renderItems();
+    } catch (err) {
+        console.error('Recommend error:', err);
+        showToast(`❌ Gagal menerapkan rekomendasi: ${err.message}`, 'error');
     }
-
-    showToast(`✅ "${item.name}" sekarang di top recommendation! 🌟`, 'success');
-    closeRecommendationModal();
-    renderItems();
 }
 
-// ============ STATISTICS ============
-function loadStatistics() {
-    const stats = calculateStatistics();
+// STATISTICS
+async function loadStatistics() {
+    try {
+        const res = await fetch('/api/admin/stats', {
+            headers: { 'x-admin-id': ADMIN_ID }
+        });
+        const data = await res.json();
 
-    document.getElementById('totalItems').textContent = stats.totalItems;
-    document.getElementById('totalBids').textContent = stats.totalBids;
-    document.getElementById('totalUsers').textContent = stats.totalUsers;
-    document.getElementById('activeAuctions').textContent = stats.activeAuctions;
+        if (!res.ok) {
+            console.warn('Fetch stats failed:', data.error);
+            showToast(`❌ ${data.error}`, 'error');
+            return;
+        }
+
+        const stats = data.stats;
+        const totalItems = document.getElementById('totalItems');
+        const totalBids = document.getElementById('totalBids');
+        const totalUsers = document.getElementById('totalUsers');
+        const activeAuctions = document.getElementById('activeAuctions');
+
+        if (totalItems) totalItems.textContent = stats.items.total;
+        if (totalBids) totalBids.textContent = stats.bids.total;
+        if (totalUsers) totalUsers.textContent = stats.users.total;
+        if (activeAuctions) activeAuctions.textContent = stats.items.active;
+    } catch (err) {
+        console.error('Load stats error:', err);
+        showToast(`❌ Gagal memuat statistik: ${err.message}`, 'error');
+    }
 }
 
-function calculateStatistics() {
-    const totalItems = adminState.items.length;
-    const totalBids = adminState.items.reduce((sum, item) => {
-        return sum + (item.bids ? item.bids.length : 0);
-    }, 0);
-    const totalUsers = adminState.users.length;
-    const activeAuctions = adminState.items.filter(i => i.status === 'active').length;
+// USERS MANAGEMENT
+async function loadUsersData() {
+    try {
+        const res = await fetch('/api/admin/users', {
+            headers: { 'x-admin-id': ADMIN_ID }
+        });
+        const data = await res.json();
 
-    return {
-        totalItems,
-        totalBids,
-        totalUsers,
-        activeAuctions
-    };
+        if (!res.ok) {
+            console.warn('Fetch users failed:', data.error);
+            loadUsersFromStorage();
+            return;
+        }
+
+        adminState.users = data.users || [];
+        renderUsers();
+    } catch (err) {
+        console.error('Load users error:', err);
+        loadUsersFromStorage();
+    }
 }
 
-// ============ USERS MANAGEMENT ============
-function loadUsersData() {
-    // Simulating API call
+function loadUsersFromStorage() {
     const storedUsers = localStorage.getItem('registeredUsers');
     
     if (storedUsers) {
@@ -447,6 +474,8 @@ function loadUsersData() {
 function renderUsers() {
     const usersList = document.getElementById('usersList');
 
+    if (!usersList) return;
+
     if (adminState.users.length === 0) {
         usersList.innerHTML = `
             <div class="empty-state">
@@ -462,8 +491,8 @@ function renderUsers() {
 }
 
 function createUserCard(user) {
-    const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
-    const joinDate = new Date(user.joinDate).toLocaleDateString('id-ID');
+    const initials = (user.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase();
+    const joinDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString('id-ID') : 'N/A';
 
     return `
         <div class="user-card">
@@ -475,15 +504,56 @@ function createUserCard(user) {
                     <p>📞 ${user.phone || '-'}</p>
                     <p>📅 Bergabung: ${joinDate}</p>
                 </div>
+                <button class="btn btn-danger" style="align-self: flex-start; margin-left: auto;" onclick="deleteUser(${user.id}, '${user.name.replace(/'/g, "\\'")}')">
+                    🗑️ Hapus
+                </button>
             </div>
         </div>
     `;
 }
 
-// ============ TOAST NOTIFICATIONS ============
+async function deleteUser(userId, userName) {
+    if (!confirm(`Hapus user "${userName}" dan semua data terkaitnya?`)) return;
+
+    try {
+        const res = await fetch(`/api/admin/users/${userId}`, {
+            method: 'DELETE',
+            headers: { 'x-admin-id': ADMIN_ID }
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            showToast(`❌ ${data.error}`, 'error');
+            return;
+        }
+
+        adminState.users = adminState.users.filter(u => u.id !== userId);
+        showToast(`✅ User "${userName}" berhasil dihapus`, 'success');
+        renderUsers();
+    } catch (err) {
+        console.error('Delete user error:', err);
+        showToast(`❌ Gagal menghapus user: ${err.message}`, 'error');
+    }
+}
+
+// TOAST NOTIFICATIONS
 function showToast(message, type = 'info') {
     const toast = document.getElementById('toast');
     
+    if (!toast) {
+        // Create toast if doesn't exist
+        const newToast = document.createElement('div');
+        newToast.id = 'toast';
+        newToast.className = `toast active ${type}`;
+        newToast.textContent = message;
+        document.body.appendChild(newToast);
+        
+        setTimeout(() => {
+            newToast.classList.remove('active');
+        }, 3000);
+        return;
+    }
+
     toast.textContent = message;
     toast.className = `toast active ${type}`;
 
@@ -492,21 +562,24 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// ============ LOGOUT FUNCTIONALITY ============
+// LOGOUT FUNCTIONALITY
 function logoutAdmin() {
     if (confirm('Anda yakin ingin keluar dari panel admin?')) {
         localStorage.removeItem('isAdminLoggedIn');
         localStorage.removeItem('adminName');
-        
+        // Also clear the user session so index.html shows the login page
+        localStorage.removeItem('user');
+        localStorage.removeItem('isLoggedIn');
+
         showToast('✅ Anda telah logout dari admin panel', 'success');
         
         setTimeout(() => {
             window.location.href = 'index.html';
-        }, 1000);
+        }, 800);
     }
 }
 
-// ============ UTILITY FUNCTIONS ============
+// UTILITY FUNCTIONS
 function getItemById(id) {
     return adminState.items.find(item => item.id === id);
 }

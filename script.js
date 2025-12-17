@@ -17,86 +17,150 @@ const FULL_CATEGORIES = [
     'Random'
 ];
 
-let auctionItems = [
-    {
-        id: 1,
-        name: "Lukisan Monalisa Replica",
-        image: "https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?w=600",
-        description: "Replika sempurna dari masterpiece Leonardo da Vinci, dibuat dengan teknik klasik dan cat minyak premium.",
-        currentBid: 25000000,
-        endTime: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(),
-        seller: "Gallery Renaissance",
-        sellerId: "SELL001",
-        sellerPhone: "082112345678",
-        sellerRating: 4.8,
-        categories: ["Seni", "Lukisan 90s"]
-    },
-    {
-        id: 2,
-        name: "Vas Keramik Dinasti Ming",
-        image: "https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=600",
-        description: "Vas antik dari Dinasti Ming (1368-1644), ornamen naga berlapis emas dengan kondisi sempurna.",
-        currentBid: 150000000,
-        endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-        seller: "Asian Antiquities",
-        sellerId: "SELL002",
-        sellerPhone: "081987654321",
-        sellerRating: 4.6,
-        categories: ["Antik", "Vas", "Barang Antik"]
-    },
-    {
-        id: 3,
-        name: "Jam Tangan Patek Philippe Vintage",
-        image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?w=600",
-        description: "Patek Philippe Calatrava tahun 1950-an, limited edition dengan sertifikat keaslian dan box original.",
-        currentBid: 450000000,
-        endTime: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
-        seller: "Luxury Timepieces",
-        sellerId: "SELL003",
-        sellerPhone: "085512345678",
-        sellerRating: 4.9,
-        categories: ["Jam Tangan", "Aksesoris"]
-    },
-    {
-        id: 4,
-        name: "Patung Marmer Yunani Kuno",
-        image: "https://images.unsplash.com/photo-1566199101570-c9c4c2863f9d?w=600",
-        description: "Patung dewi Aphrodite dari era Hellenistic, marmer Carrara putih dengan detail pahatan luar biasa.",
-        currentBid: 320000000,
-        endTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        seller: "Classical Arts Foundation",
-        sellerId: "SELL004",
-        sellerPhone: "083345678901",
-        sellerRating: 4.7,
-        categories: ["Seni", "Antik", "Barang Antik"]
-    },
-    {
-        id: 5,
-        name: "Kaligrafi Arab Antik",
-        image: "https://images.unsplash.com/photo-1612198188060-c7c2a3b66eae?w=600",
-        description: "Kaligrafi suci berusia 400 tahun dengan tinta emas pada papirus, lengkap dengan frame kayu ukir.",
-        currentBid: 85000000,
-        endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
-        seller: "Islamic Heritage Museum",
-        sellerId: "SELL005",
-        sellerPhone: "089876543210",
-        sellerRating: 4.5,
-        categories: ["Kaligrafi", "Antik", "Barang Antik"]
-    },
-    {
-        id: 6,
-        name: "Permadani Persia Sutra",
-        image: "https://images.unsplash.com/photo-1600166898329-c0f131b9b7dc?w=600",
-        description: "Permadani sutra Iran ukuran 3x4 meter, motif taman surga dengan 1000 simpul per inci persegi.",
-        currentBid: 175000000,
-        endTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
-        seller: "Persian Carpet House",
-        sellerId: "SELL006",
-        sellerPhone: "088765432109",
-        sellerRating: 4.8,
-        categories: ["Permadani", "Perabotan"]
+function showPage(pageId) {
+    const pages = ['auctionPage', 'addItemPage', 'myItemsPage', 'myBidsPage', 'profilePage', 'adminPage'];
+    pages.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = (id === pageId) ? 'block' : 'none';
+    });
+}
+
+// Require login helper: returns user object if logged in, otherwise opens modal that asks whether to login
+function ensureLoggedIn() {
+    const userRaw = localStorage.getItem('user');
+    if (userRaw) {
+        try { currentUser = JSON.parse(userRaw); return currentUser; } catch (e) { return false; }
     }
-];
+    // Open the modal that offers to go to login or cancel
+    openLoginChoiceModal();
+    return false;
+}
+
+// Open/close handlers for login-choice modal
+function openLoginChoiceModal(message) {
+    const modal = document.getElementById('loginChoiceModal');
+    if (!modal) {
+        // fallback to old behavior
+        showAlert('Silakan login untuk melanjutkan', 'info');
+        setTimeout(() => {
+            const loginPage = document.getElementById('loginPage');
+            const main = document.getElementById('mainContent');
+            if (loginPage) loginPage.style.display = 'flex';
+            if (main) main.style.display = 'none';
+            const emailInput = document.getElementById('loginEmail'); if (emailInput) emailInput.focus();
+        }, 700);
+        return;
+    }
+    // optional message override
+    if (message) {
+        const desc = document.getElementById('loginChoiceDesc'); if (desc) desc.textContent = message;
+    }
+    // Close mobile nav if open so the modal takes precedence
+    const nav = document.querySelector('.nav-menu'); if (nav) nav.classList.remove('active');
+    document.body.classList.remove('mobile-menu-open');
+    const mobileNavBtn = document.getElementById('mobileNavToggle'); if (mobileNavBtn) mobileNavBtn.setAttribute('aria-expanded', 'false');
+
+    modal.classList.add('active');
+    document.body.classList.add('modal-open');
+    setTimeout(() => {
+        const primary = modal.querySelector('.btn-primary'); if (primary) primary.focus();
+    }, 80);
+}
+
+function closeLoginChoiceModal() {
+    const modal = document.getElementById('loginChoiceModal');
+    if (!modal) return;
+    modal.classList.remove('active');
+    document.body.classList.remove('modal-open');
+}
+
+function proceedToLoginFromChoice() {
+    closeLoginChoiceModal();
+    showAlert('Silakan login untuk melanjutkan', 'info');
+    const loginPage = document.getElementById('loginPage');
+    const main = document.getElementById('mainContent');
+    if (loginPage) loginPage.style.display = 'flex';
+    if (main) main.style.display = 'none';
+    setTimeout(() => { const emailInput = document.getElementById('loginEmail'); if (emailInput) emailInput.focus(); }, 200);
+}
+
+function updateWishlistBadge() {
+    const badge = document.getElementById('wishlistBadge');
+    if (badge) {
+        badge.textContent = wishlist.length;
+    }
+}
+
+let auctionItems = [];
+
+async function loadItemsFromServer() {
+    try {
+        const res = await fetch('/api/items');
+        if (!res.ok) throw new Error('Failed to fetch /api/items: ' + res.status);
+        const data = await res.json();
+        // normalize server fields to client expectation
+        auctionItems = data.map(it => ({
+            id: it.id,
+            name: it.name,
+            image: it.image || it.img || 'default-item.png',
+            description: it.description || '',
+            currentBid: Number(it.price || it.currentBid || 0),
+            initialPrice: Number(it.price || it.currentBid || 0),
+            endTime: it.endTime || it.endsAt || new Date(Date.now() + 24*60*60*1000).toISOString(),
+            seller: it.sellerName || it.seller || 'Penjual',
+            sellerId: it.sellerId || it.seller_id || null,
+            sellerPhone: it.sellerPhone || null,
+            sellerRating: it.sellerRating || 4.5,
+            categories: Array.isArray(it.categories) ? it.categories : (it.categories ? JSON.parse(it.categories) : []),
+            soldNotified: false,
+            status: it.status || 'active'
+        }));
+        // refresh UI
+        renderCategoryFilters();
+        renderSidebarCategories();
+        renderAuctionItems();
+        updateWishlistBadge();
+    } catch (err) {
+        console.error('loadItemsFromServer error', err);
+        throw err;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+    showLoader();
+
+    // Fail-safe: sembunyikan loader setelah 7s jika masih aktif
+    setTimeout(() => {
+        const ld = document.getElementById('loader');
+        if (ld && ld.classList.contains('active')) {
+            ld.classList.remove('active');
+            console.warn('Loader timeout — kemungkinan server tidak merespon atau ada error JS.');
+            alert('Gagal memuat data. Periksa server atau console untuk error.');
+        }
+    }, 7000);
+
+    try {
+        // coba load data dari server dulu; jangan blok UI terlalu lama
+        await loadItemsFromServer();
+    } catch (err) {
+        console.error('Error loadItemsFromServer on DOMContentLoaded:', err);
+        // biarkan fallback timeout menangani notifikasi ke user
+    } finally {
+        // init UI / animations walau data gagal
+        renderCategoryFilters();
+        renderSidebarCategories();
+        renderAuctionItems();
+        updateWishlistBadge();
+        startTimers();
+        startEndedChecker();
+        setupSidebarToggle();
+        initLiquidScroll();
+        hideLoader();
+        // load notifications for current user (if logged)
+        loadNotifications().catch(()=>{});
+    }
+});
+
 
 let userBids = [];
 let wishlist = [];
@@ -104,6 +168,8 @@ let currentBidItem = null;
 let selectedCategories = new Set();
 let isAdmin = false;
 let currentUser = null; // Store logged-in user info
+let notifications = [];
+let _prevNotifUnread = 0;
 const ADMIN_PASSWORD = 'admin123';
 const ADMIN_ID = 'ADMIN2024'; // Special admin ID
 
@@ -111,80 +177,6 @@ auctionItems.forEach(item => {
     item.initialPrice = item.currentBid;
     item.soldNotified = false;
 });
-
-// ============ ADMIN ACCESS SETUP ============
-function setupAdminLogoAccess() {
-    const adminLogo = document.getElementById('adminAccessLogo');
-    
-    if (adminLogo) {
-        // Check if user is admin
-        const isAdminLoggedIn = localStorage.getItem('isAdminLoggedIn') === 'true';
-        
-        if (isAdminLoggedIn && isAdmin) {
-            // Admin user - enable click access
-            adminLogo.style.cursor = 'pointer';
-            adminLogo.style.opacity = '1';
-            adminLogo.style.transition = 'transform 0.3s ease, filter 0.3s ease';
-            adminLogo.title = '🔐 Click untuk masuk ke Admin Panel';
-            
-            // Add hover effect for admin
-            adminLogo.addEventListener('mouseenter', () => {
-                adminLogo.style.transform = 'scale(1.1)';
-                adminLogo.style.filter = 'drop-shadow(0 0 8px rgba(241, 79, 79, 0.6))';
-            });
-            
-            adminLogo.addEventListener('mouseleave', () => {
-                adminLogo.style.transform = 'scale(1)';
-                adminLogo.style.filter = 'drop-shadow(none)';
-            });
-        } else {
-            // Regular user - disable click
-            adminLogo.style.cursor = 'default';
-            adminLogo.style.opacity = '0.6';
-            adminLogo.title = '👤 Hanya admin yang bisa akses admin panel';
-        }
-        
-        adminLogo.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Check if user is admin
-            const isAdminLoggedIn = localStorage.getItem('isAdminLoggedIn') === 'true';
-            
-            if (isAdminLoggedIn && isAdmin) {
-                // Redirect to admin panel
-                window.location.href = 'admin.html';
-            } else {
-                // Not admin, show error message
-                showAlert('❌ Hanya admin yang dapat mengakses admin panel!', 'error');
-            }
-        });
-    }
-}
-
-// ============ PAGE VISIBILITY LISTENER ============
-function setupPageVisibilityListener() {
-    // Sync data saat page kembali dari tab lain (misal dari admin panel)
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            // Page menjadi visible, check if there are changes from admin panel
-            const storedItems = localStorage.getItem('auctionItems');
-            if (storedItems) {
-                try {
-                    const updatedItems = JSON.parse(storedItems);
-                    // Update auctionItems array
-                    auctionItems = updatedItems;
-                    // Re-render items
-                    renderAuctionItems();
-                    renderCategoryFilters();
-                    renderSidebarCategories();
-                } catch (e) {
-                    console.error('Error syncing items:', e);
-                }
-            }
-        }
-    });
-}
 
 document.addEventListener('DOMContentLoaded', function() {
     showLoader();
@@ -196,12 +188,6 @@ document.addEventListener('DOMContentLoaded', function() {
         startTimers();
         startEndedChecker();
         setupSidebarToggle();
-        
-        // Setup admin logo access
-        setupAdminLogoAccess();
-        
-        // Setup page visibility listener untuk sync data saat kembali dari admin panel
-        setupPageVisibilityListener();
         
         // Initialize liquid scroll animation
         initLiquidScroll();
@@ -270,6 +256,16 @@ document.querySelectorAll('.nav-link').forEach(link => {
         e.preventDefault();
         const page = this.dataset.page;
 
+        // If link doesn't correspond to a page (e.g. logout, notifications), do nothing
+        if (!page) return;
+
+        // pages requiring login
+        const authPages = ['mybid','myitem','profile','wishlist'];
+        if (authPages.includes(page) && !localStorage.getItem('user')) {
+            ensureLoggedIn();
+            return;
+        }
+
         if (page === 'admin' && !isAdmin) {
             alert('Anda tidak memiliki akses admin. Silakan login sebagai admin terlebih dahulu.');
             return;
@@ -278,13 +274,250 @@ document.querySelectorAll('.nav-link').forEach(link => {
         this.classList.add('active');
         
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(page + 'Page').classList.add('active');
+        const target = document.getElementById(page + 'Page');
+        if (target) {
+            target.classList.add('active');
+        } else {
+            console.warn('Target page element not found for', page);
+        }
         
         if (page === 'mybid') renderBidHistory();
         if (page === 'wishlist') renderWishlist();
         if (page === 'admin') renderAdminPanel();
     });
 });
+
+// Touch fallback: handle quick taps on touch devices when click may be delayed or blocked
+(function() {
+    function handleNavActivation(linkEl) {
+        if (!linkEl) return;
+        const page = linkEl.dataset.page;
+        if (!page) return;
+        // Pages that require authentication
+        const authPages = ['mybid','myitem','profile','wishlist'];
+        if (authPages.includes(page) && !localStorage.getItem('user')) {
+            // Prompt the user to login (opens the choice modal)
+            openLoginChoiceModal();
+            // keep mobile nav open/closed behavior handled by modal styles; stop navigation
+            return;
+        }
+        if (page === 'admin' && !isAdmin) { alert('Anda tidak memiliki akses admin. Silakan login sebagai admin terlebih dahulu.'); return; }
+        document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+        linkEl.classList.add('active');
+        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+        const target = document.getElementById(page + 'Page');
+        if (target) target.classList.add('active');
+        if (page === 'mybid') renderBidHistory();
+        if (page === 'wishlist') renderWishlist();
+        if (page === 'admin') renderAdminPanel();
+
+        // close mobile nav and overlay
+        const nav = document.querySelector('.nav-menu');
+        if (nav) nav.classList.remove('active');
+        document.body.classList.remove('mobile-menu-open');
+        const mobileNavBtn = document.getElementById('mobileNavToggle');
+        if (mobileNavBtn) mobileNavBtn.setAttribute('aria-expanded', 'false');
+        console.debug('Handled touch navigation to page', page);
+    }
+
+    document.addEventListener('touchstart', (e) => {
+        const link = e.target.closest('.nav-link');
+        if (link) {
+            const page = link.dataset.page;
+            if (!page) {
+                link.click();
+                const nav = document.querySelector('.nav-menu'); if (nav) nav.classList.remove('active');
+                document.body.classList.remove('mobile-menu-open');
+                const mobileNavBtn = document.getElementById('mobileNavToggle'); if (mobileNavBtn) mobileNavBtn.setAttribute('aria-expanded', 'false');
+                return;
+            }
+            e.preventDefault();
+            handleNavActivation(link);
+        }
+    }, { passive: false });
+
+    
+    const navMenuEl = document.querySelector('.nav-menu');
+    if (navMenuEl) {
+        navMenuEl.addEventListener('click', (e) => {
+            const link = e.target.closest('.nav-link');
+            if (!link) return;
+            const page = link.dataset.page;
+            if (!page) {
+                return;
+            }
+            e.preventDefault();
+            console.debug('nav-menu click delegating to', page || link.textContent.trim());
+            handleNavActivation(link);
+        });
+        navMenuEl.addEventListener('touchstart', (e) => {
+            const link = e.target.closest('.nav-link');
+            if (!link) return;
+            const page = link.dataset.page;
+            if (!page) {
+                link.click();
+                const nav = document.querySelector('.nav-menu'); if (nav) nav.classList.remove('active');
+                document.body.classList.remove('mobile-menu-open');
+                const mobileNavBtn = document.getElementById('mobileNavToggle'); if (mobileNavBtn) mobileNavBtn.setAttribute('aria-expanded', 'false');
+                return;
+            }
+            e.preventDefault();
+            console.debug('nav-menu touchstart delegating to', page || link.textContent.trim());
+            handleNavActivation(link);
+        }, { passive: false });
+    }
+})();
+
+
+// Notifications: load, render, mark read
+async function loadNotifications() {
+    const userRaw = localStorage.getItem('user');
+    if (!userRaw) return;
+    const user = JSON.parse(userRaw);
+    try {
+        const res = await fetch(`/api/notifications/${user.id}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        notifications = data;
+        const unread = notifications.filter(n => n.readFlag === 0).length;
+        const badge = document.getElementById('notifBadge');
+        if (badge) badge.textContent = unread;
+
+        if (unread > _prevNotifUnread && _prevNotifUnread !== 0) {
+            showAlert('Anda memiliki notifikasi baru', 'info');
+        }
+        _prevNotifUnread = unread;
+    } catch (err) { console.error('loadNotifications error', err); }
+}
+
+function openNotificationsModal() {
+    const modal = document.getElementById('notificationsModal');
+    modal.classList.add('active');
+    renderNotifications();
+}
+
+function renderNotifications() {
+    const list = document.getElementById('notificationsList');
+    if (!list) return;
+    if (!notifications.length) {
+        list.innerHTML = '<div class="empty-state"><p>Tidak ada notifikasi.</p></div>';
+        return;
+    }
+    // build HTML with placeholders for phone for won-notifications
+    list.innerHTML = notifications.map(n => {
+        const time = new Date(n.time).toLocaleString();
+        const unreadClass = n.readFlag === 0 ? 'status-outbid' : '';
+        const actions = [];
+        if (n.type && n.type.startsWith('won')) {
+            actions.push(`<button class="btn btn-primary" onclick="payViaWhatsAppFromNotif(${n.itemId}, ${n.id})">Bayar</button>`);
+            actions.push(`<button class="btn btn-secondary" onclick="openItemFromNotif(${n.itemId})">Lihat</button>`);
+        } else if (n.type === 'payment_received') {
+            actions.push(`<button class="btn btn-secondary" onclick="openItemFromNotif(${n.itemId})">Lihat Transaksi</button>`);
+        }
+        actions.push(`<button class="btn" onclick="markNotificationRead(${n.id})">Tandai Dibaca</button>`);
+
+        // add phone placeholder for won notifications
+        const phonePlaceholder = n.type && n.type.startsWith('won') ? `<div id="notifPhone${n.id}" style="color:#444; font-size:0.9rem; margin-top:6px;">Nomor penjual: <em>memuat...</em></div>` : '';
+
+        return `<div class="bid-card ${unreadClass}" style="display:flex; flex-direction:column; gap:8px; margin-bottom:8px; padding:12px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-weight:600">${n.message}</div>
+                        <div style="color:#666; font-size:0.85rem;">${time}</div>
+                    </div>
+                    ${phonePlaceholder}
+                    <div style="display:flex; gap:6px;">${actions.join('')}</div>
+                </div>`;
+    }).join('');
+
+    // populate phone numbers for won notifications asynchronously
+    notifications.forEach(n => {
+        if (n.type && n.type.startsWith('won') && n.itemId) {
+            const el = document.getElementById(`notifPhone${n.id}`);
+            if (!el) return;
+            // try to get from in-memory items first
+            const item = getItemById(n.itemId);
+            if (item && (item.sellerPhone || (item.seller && item.seller.phone))) {
+                const phone = item.sellerPhone || (item.seller && item.seller.phone);
+                el.innerHTML = `Nomor penjual: <strong>${phone}</strong>`;
+            } else {
+                // fetch item details
+                fetch(`/api/items/${n.itemId}`).then(res => res.ok ? res.json() : null).then(body => {
+                    if (!body || !body.item) { el.innerHTML = 'Nomor penjual: <em>tidak tersedia</em>'; return; }
+                    const phone = body.item.sellerPhone || (body.item.seller && body.item.seller.phone);
+                    el.innerHTML = phone ? `Nomor penjual: <strong>${phone}</strong>` : 'Nomor penjual: <em>tidak tersedia</em>';
+                }).catch(() => {
+                    el.innerHTML = 'Nomor penjual: <em>tidak tersedia</em>';
+                });
+            }
+        }
+    });
+}
+
+async function markNotificationRead(id) {
+    try {
+        const res = await fetch(`/api/notifications/${id}/read`, { method: 'PUT' });
+        if (!res.ok) throw new Error('Failed');
+        // update locally
+        const n = notifications.find(x => x.id === id);
+        if (n) n.readFlag = 1;
+        renderNotifications();
+        loadNotifications();
+    } catch (err) { console.error('markNotificationRead error', err); }
+}
+
+function openItemFromNotif(itemId) {
+    if (!itemId) return;
+    closeDetailModal();
+    openItemDetail(itemId);
+}
+
+// Open WhatsApp to seller from a notification (attempt to fetch item if not in memory)
+async function payViaWhatsAppFromNotif(itemId, notifId) {
+    try {
+        // mark read immediately
+        if (notifId) markNotificationRead(notifId);
+        let item = getItemById(itemId);
+        if (!item) {
+            const res = await fetch(`/api/items/${itemId}`);
+            if (res.ok) {
+                const body = await res.json();
+                item = body.item || null;
+            }
+        }
+        if (!item) return alert('Informasi item tidak tersedia');
+        let phone = item.sellerPhone || (item.seller && item.seller.phone) || null;
+        if (!phone) {
+            // fallback: try loading seller profile
+            try {
+                if (item.sellerId) {
+                    const ures = await fetch(`/api/users/${item.sellerId}`);
+                    if (ures.ok) {
+                        const ubody = await ures.json();
+                        if (ubody.user && ubody.user.phone) {
+                            phone = ubody.user.phone;
+                        }
+                    }
+                }
+            } catch (e) { /* ignore */ }
+        }
+        if (!phone) return alert('Nomor penjual tidak tersedia');
+        const buyerName = currentUser && currentUser.name ? currentUser.name : 'Pembeli';
+        const message = encodeURIComponent(`Halo, saya ${buyerName} (pembeli) ingin mengonfirmasi pembayaran untuk barang: ${item.name || 'Barang'}. Mohon informasikan detail pembayaran dan alamat pengiriman.`);
+        // normalize phone (strip non-digits, convert leading 0 to country code 62)
+        let normalized = String(phone).replace(/\D/g, '');
+        if (normalized.startsWith('0')) normalized = '62' + normalized.slice(1);
+        const waLink = `https://wa.me/${normalized}?text=${message}`;
+        window.open(waLink, '_blank');
+    } catch (err) {
+        console.error('payViaWhatsAppFromNotif error', err);
+        alert('Gagal membuka WhatsApp');
+    }
+}
+
+// Poll notifications every minute
+setInterval(() => { loadNotifications().catch(()=>{}); }, 60*1000);
+
+
 
 
 function renderAuctionItems() {
@@ -324,9 +557,41 @@ function createAuctionCard(item, isWishlisted = false) {
     card.className = 'auction-card';
     
     const timeLeft = getTimeLeft(item.endTime);
-    
+
+    const userRaw = localStorage.getItem('user');
+    const viewer = userRaw ? JSON.parse(userRaw) : null;
+    const isSeller = viewer && viewer.id && item.sellerId && parseInt(viewer.id) === parseInt(item.sellerId);
+    const isActive = item.status === 'active' && new Date(item.endTime) > new Date();
 
     const categoriesHtml = (item.categories || []).map(c => `<span class="bid-label" style="margin-right:6px; display:inline-block; background: rgba(0,0,0,0.04); padding:4px 8px; border-radius:12px; font-size:0.75rem;">${c}</span>`).join('');
+
+    // Build action buttons according to state
+    let actionButtons = '';
+    if (!isActive) {
+        actionButtons += `<button class="btn btn-secondary" disabled><i class="fas fa-clock"></i> Lelang Berakhir</button>`;
+    } else if (isSeller) {
+        actionButtons += `<button class="btn btn-secondary" disabled><i class="fas fa-ban"></i> Tidak bisa bid (Penjual)</button>`;
+    } else {
+        actionButtons += `<button class="btn btn-primary" onclick="openBidModal(${item.id})"><i class="fas fa-gavel"></i> Bid Sekarang</button>`;
+    }
+
+    actionButtons += `
+        <button class="btn btn-secondary" onclick="openItemDetailModal(${item.id})" style="background: linear-gradient(135deg, #4a90e2, #357abd); color: white;">
+            <i class="fas fa-eye"></i> Lihat Detail
+        </button>
+        <button class="btn btn-wishlist ${isWishlisted ? 'active' : ''}" onclick="toggleWishlist(${item.id})">
+            <i class="fas fa-heart"></i>
+        </button>
+    `;
+
+    if (viewer && viewer.id && parseInt(viewer.id) === parseInt(item.sellerId)) {
+        actionButtons += `
+            <button class="btn btn-secondary" onclick="openEditItemModal(${item.id})"><i class="fas fa-edit"></i></button>
+            <button class="btn btn-warning" onclick="openSelectWinnerModal(${item.id})"><i class="fas fa-trophy"></i></button>
+        `;
+    }
+
+    if (isAdmin) actionButtons += `<button class="btn btn-wishlist" style="background:#ff6b6b;color:#fff;" onclick="deleteItem(${item.id})"><i class="fas fa-trash"></i></button>`;
 
     card.innerHTML = `
         <img src="${item.image}" alt="${item.name}" class="card-image">
@@ -345,16 +610,7 @@ function createAuctionCard(item, isWishlisted = false) {
                 </div>
             </div>
             <div class="card-actions">
-                <button class="btn btn-primary" onclick="openBidModal(${item.id})">
-                    <i class="fas fa-gavel"></i> Bid Sekarang
-                </button>
-                <button class="btn btn-secondary" onclick="openItemDetailModal(${item.id})" style="background: linear-gradient(135deg, #4a90e2, #357abd); color: white;">
-                    <i class="fas fa-eye"></i> Lihat Detail
-                </button>
-                <button class="btn btn-wishlist ${isWishlisted ? 'active' : ''}" onclick="toggleWishlist(${item.id})">
-                    <i class="fas fa-heart"></i>
-                </button>
-                ${isAdmin ? `<button class="btn btn-wishlist" style="background:#ff6b6b;color:#fff;" onclick="deleteItem(${item.id})"><i class="fas fa-trash"></i></button>` : ''}
+                ${actionButtons}
             </div>
         </div>
     `;
@@ -364,7 +620,16 @@ function createAuctionCard(item, isWishlisted = false) {
 
 
 function openBidModal(itemId) {
+    // require login first
+    const user = ensureLoggedIn(); if (!user) return;
     currentBidItem = auctionItems.find(item => item.id === itemId);
+    if (!currentBidItem) return alert('Item tidak ditemukan');
+    // prevent seller from bidding their own item
+    if (currentBidItem.sellerId && String(currentBidItem.sellerId) === String(user.id)) return alert('Anda tidak dapat menawar item Anda sendiri');
+    // ensure auction active
+    if (currentBidItem.status && currentBidItem.status !== 'active') return alert('Lelang untuk item ini sudah berakhir atau tidak aktif');
+    if (new Date(currentBidItem.endTime) <= new Date()) return alert('Lelang sudah berakhir');
+
     document.getElementById('bidAmount').value = '';
     document.getElementById('bidAmount').min = currentBidItem.currentBid + 1000;
     document.getElementById('bidModal').classList.add('active');
@@ -375,60 +640,80 @@ function closeBidModal() {
     currentBidItem = null;
 }
 
-function submitBid() {
-    const bidAmount = parseInt(document.getElementById('bidAmount').value);
-    
-    if (!bidAmount || bidAmount <= currentBidItem.currentBid) {
-        alert('Bid harus lebih tinggi dari harga saat ini!');
-        return;
+async function submitBid() {
+      const bidAmount = parseInt(document.getElementById('bidAmount').value);
+      if (!currentBidItem) return alert('Item tidak ditemukan');
+      if (!bidAmount || bidAmount <= currentBidItem.currentBid) {
+          alert('Bid harus lebih tinggi dari harga saat ini!');
+          return;
+      }
+
+      const user = ensureLoggedIn();
+      if (!user) return;
+
+      try {
+          const res = await fetch('/api/bids', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                  userId: user.id,
+                  itemId: currentBidItem.id,
+                  amount: bidAmount
+              })
+          });
+          const body = await res.json();
+          console.log('submitBid response:', res.status, body); // DEBUG
+          if (!res.ok) return alert(body.error || 'Gagal memasang bid');
+          showNotification('Bid berhasil dipasang! 🎉');
+          
+          // ADDED: reload items + bid history
+          await loadItemsFromServer();
+          if (typeof loadBidHistory === 'function') {
+              await loadBidHistory();
+          }
+      } catch (err) {
+          console.error('submitBid error', err);
+          alert('Gagal terhubung ke server');
+      } finally {
+          closeBidModal();
+      }
     }
-    
-    
-    currentBidItem.currentBid = bidAmount;
-    
-    
-    const existingBidIndex = userBids.findIndex(b => b.itemId === currentBidItem.id);
-    if (existingBidIndex >= 0) {
-        userBids[existingBidIndex].amount = bidAmount;
-        userBids[existingBidIndex].time = new Date().toISOString();
-    } else {
-        userBids.push({
-            itemId: currentBidItem.id,
-            amount: bidAmount,
-            time: new Date().toISOString(),
-            status: 'winning'
-        });
-    }
-    
-    closeBidModal();
-    renderAuctionItems();
-    
-    
-    showNotification('Bid berhasil dipasang! 🎉');
-}
 
 
-function toggleWishlist(itemId) {
-    const index = wishlist.findIndex(w => w.id === itemId);
-    
-    if (index >= 0) {
-        wishlist.splice(index, 1);
-    } else {
-        const item = auctionItems.find(i => i.id === itemId);
-        wishlist.push(item);
-    }
-    
-    updateWishlistBadge();
-    renderAuctionItems();
-    
-    if (document.getElementById('wishlistPage').classList.contains('active')) {
-        renderWishlist();
-    }
-}
+ async function toggleWishlist(itemId) {
+      const user = ensureLoggedIn();
+      if (!user) return;
 
-function updateWishlistBadge() {
-    document.getElementById('wishlistBadge').textContent = wishlist.length;
-}
+      try {
+          const res = await fetch('/api/wishlist', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.id, itemId })
+          });
+          const body = await res.json();
+          if (!res.ok) return alert(body.error || 'Gagal update wishlist');
+          // refresh wishlist from server for accuracy
+          const wlRes = await fetch(`/api/wishlist/${user.id}`);
+          if (wlRes.ok) {
+              const items = await wlRes.json();
+              wishlist = items.map(i => ({ id: i.id, ...i }));
+          } else {
+              // fallback toggle locally
+              const idx = wishlist.findIndex(w => w.id === itemId);
+              if (idx >= 0) wishlist.splice(idx, 1);
+              else {
+                  const item = auctionItems.find(i => i.id === itemId);
+                  if (item) wishlist.push(item);
+              }
+          }
+          updateWishlistBadge();
+          renderAuctionItems();
+          if (document.getElementById('wishlistPage').classList.contains('active')) renderWishlist();
+      } catch (err) {
+          console.error('toggleWishlist error', err);
+          alert('Gagal terhubung ke server');
+      }
+  }
 
 function renderWishlist() {
     const grid = document.getElementById('wishlistGrid');
@@ -454,93 +739,9 @@ function renderWishlist() {
 }
 
 
-function renderBidHistory() {
-    const container = document.getElementById('bidHistory');
-    
-    if (userBids.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon"><i class="fas fa-gavel"></i></div>
-                <h2 class="empty-title">Belum Ada Penawaran</h2>
-                <p class="empty-text">Mulai ikut lelang untuk melihat riwayat penawaran Anda</p>
-            </div>
-        `;
-        return;
-    }
-    
-    container.innerHTML = '';
-    userBids.forEach(bid => {
-        const item = auctionItems.find(i => i.id === bid.itemId);
-        if (!item) return;
-        
-        const isWinning = bid.amount >= item.currentBid;
-        const statusClass = isWinning ? 'status-winning' : 'status-outbid';
-        const statusText = isWinning ? '✓ Menang' : '✗ Kalah Bid';
-        
-        const card = document.createElement('div');
-        card.className = 'bid-card';
-        card.innerHTML = `
-            <img src="${item.image}" alt="${item.name}" class="bid-image">
-            <div class="bid-details">
-                <span class="bid-status ${statusClass}">${statusText}</span>
-                <h3 class="card-title">${item.name}</h3>
-                <p class="card-description">${item.description}</p>
-                <div class="card-info" style="border: none; padding: 0;">
-                    <div class="current-bid">
-                        <div class="bid-label">Bid Anda</div>
-                        <div class="bid-amount">Rp ${formatPrice(bid.amount)}</div>
-                    </div>
-                    <div class="time-left">
-                        <div class="bid-label">Bid Tertinggi Saat Ini</div>
-                        <div class="bid-amount" style="font-size: 1.2rem;">Rp ${formatPrice(item.currentBid)}</div>
-                    </div>
-                </div>
-            </div>
-        `;
-        container.appendChild(card);
-    });
-    
-    setupLiquidScrollForElements();
+async function renderBidHistory() {
+    await loadBidHistory(); // Sudah handle semuanya di loadBidHistory()
 }
-
-
-document.getElementById('addItemForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const fileInput = document.getElementById('itemImage');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        alert('Silakan upload gambar barang');
-        return;
-    }
-    
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const newItem = {
-            id: Date.now(),
-            name: document.getElementById('itemName').value,
-            image: e.target.result,
-            description: document.getElementById('itemDescription').value,
-            currentBid: parseInt(document.getElementById('itemPrice').value),
-            endTime: new Date(document.getElementById('itemEndTime').value).toISOString(),
-            seller: 'Anda',
-            initialPrice: parseInt(document.getElementById('itemPrice').value),
-            soldNotified: false,
-            categories: Array.from(document.querySelectorAll('.item-category-checkbox:checked')).map(el => el.value)
-        };
-        
-        auctionItems.unshift(newItem);
-        
-        document.getElementById('addItemForm').reset();
-        showNotification('Barang berhasil ditambahkan ke lelang! 🎊');
-        
-        
-        document.querySelector('[data-page="home"]').click();
-    };
-    
-    reader.readAsDataURL(file);
-});
 
 
 function startTimers() {
@@ -576,13 +777,23 @@ function formatPrice(price) {
 
 function openItemDetail(itemId) {
     const item = getItemById(itemId);
+    if (!item) { alert('Item tidak ditemukan'); return; }
     const modal = document.getElementById('itemDetailModal');
-    
+    if (!modal) { console.warn('itemDetailModal element missing'); return; }
 
-    document.getElementById('detailItemTitle').textContent = item.name;
-    document.getElementById('detailItemImage').src = item.image;
-    document.getElementById('detailItemPrice').textContent = 'Rp ' + formatPrice(item.currentBid);
-    document.getElementById('detailItemDescription').textContent = item.description;
+    // Prefer dynamic modal if static detail IDs are not present
+    if (!document.getElementById('detailItemTitle')) {
+        return openItemDetailModal(itemId);
+    }
+
+    const titleEl = document.getElementById('detailItemTitle');
+    if (titleEl) titleEl.textContent = item.name;
+    const imgEl = document.getElementById('detailItemImage');
+    if (imgEl) imgEl.src = item.image;
+    const priceEl = document.getElementById('detailItemPrice');
+    if (priceEl) priceEl.textContent = 'Rp ' + formatPrice(item.currentBid);
+    const descEl = document.getElementById('detailItemDescription');
+    if (descEl) descEl.textContent = item.description;
     
     updateItemTimer(item.endTime);
     
@@ -619,7 +830,7 @@ function openItemDetailModal(itemId) {
                 <!-- Price & Auction Info -->
                 <div class="detail-price-box">
                     <div class="price-label">Harga Lelang Saat Ini</div>
-                    <div class="price-value">Rp ${formatPrice(item.currentBid)}</div>
+                    <div id="detailCurrentBid" class="price-value">Rp ${formatPrice(item.currentBid)}</div>
                     <div class="time-info">
                         <i class="fas fa-clock"></i> Waktu Tersisa: <span id="detailModalTimer">${getTimeLeft(item.endTime)}</span>
                     </div>
@@ -634,20 +845,18 @@ function openItemDetailModal(itemId) {
                 <!-- Seller Info -->
                 <div class="detail-section seller-info">
                     <h3><i class="fas fa-user-circle"></i> Informasi Penjual</h3>
-                    <div class="seller-card">
-                        <div class="seller-header">
-                            <div class="seller-avatar">
-                                <i class="fas fa-store"></i>
-                            </div>
-                            <div class="seller-details">
-                                <div class="seller-name">${item.seller}</div>
-                                <div class="seller-id"><i class="fas fa-tag"></i> ID: <strong>${item.sellerId}</strong></div>
-                                <div class="seller-rating">
-                                    <i class="fas fa-star"></i> ${item.sellerRating}/5.0 Rating
+                            <div class="seller-card">
+                                <div class="seller-header">
+                                    <div class="seller-avatar" id="sellerAvatar${item.id}">
+                                        <i class="fas fa-store"></i>
+                                    </div>
+                                    <div class="seller-details" id="sellerDetails${item.id}">
+                                        <div class="seller-name">${item.seller}</div>
+                                        <div class="seller-id"><i class="fas fa-tag"></i> ID: <strong>${item.sellerId}</strong></div>
+                                        <div class="seller-profile-loading" id="sellerLoading${item.id}">Memuat profil penjual...</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
                 </div>
                 
                 <!-- Payment Methods -->
@@ -677,6 +886,12 @@ function openItemDetailModal(itemId) {
                     <button class="btn btn-primary" onclick="openBidModal(${item.id}); closeDetailModal()">
                         <i class="fas fa-gavel"></i> Pasang Bid Sekarang
                     </button>
+                    
+                    <!-- Seller-only actions (Edit / Select Winner) -->
+                    ${currentUser && currentUser.id && parseInt(currentUser.id) === parseInt(item.sellerId) ? `
+                        <button class="btn btn-secondary" onclick="openEditItemModal(${item.id})"><i class="fas fa-edit"></i> Edit Item</button>
+                        <button class="btn btn-warning" onclick="openSelectWinnerModal(${item.id})"><i class="fas fa-trophy"></i> Pilih Pemenang</button>
+                    ` : ''}
                     <button class="btn btn-secondary" onclick="closeDetailModal()">
                         <i class="fas fa-times"></i> Tutup
                     </button>
@@ -686,60 +901,299 @@ function openItemDetailModal(itemId) {
     `;
     
     const modal = document.getElementById('itemDetailModal');
-    modal.innerHTML = `<div class="modal-content modal-detail">${detailHTML}</div>`;
+    modal.innerHTML = `<div class="modal-content modal-detail" data-item-id="${item.id}"><button class="modal-close-top" onclick="closeDetailModal()" aria-label="Tutup">&times;</button>${detailHTML}</div>`;
     modal.classList.add('active');
+    document.body.classList.add('modal-open');
+    (async () => {
+        try {
+            const res = await fetch(`/api/users/${item.sellerId}`);
+            if (!res.ok) return;
+            const body = await res.json();
+            const profile = body.user || {};
+            const detailsEl = document.getElementById(`sellerDetails${item.id}`);
+            const avatarEl = document.getElementById(`sellerAvatar${item.id}`);
+            if (detailsEl) {
+                detailsEl.innerHTML = `
+                    <div class="seller-name">${profile.name || item.seller}</div>
+                    <div class="seller-id"><i class="fas fa-tag"></i> ID: <strong>${item.sellerId}</strong></div>
+                    ${profile.phone ? `<div class="seller-phone">📞 ${profile.phone}</div>` : ''}
+                    ${profile.address ? `<div class="seller-address">📍 ${profile.address}</div>` : ''}
+                    ${profile.instagram ? `<div class="seller-social">Instagram: ${profile.instagram}</div>` : ''}
+                    ${profile.twitter ? `<div class="seller-social">Twitter: ${profile.twitter}</div>` : ''}
+                `;
+            }
+            if (avatarEl && profile.photo) {
+                avatarEl.innerHTML = `<img src="${profile.photo}" alt="avatar" style="width:48px;height:48px;border-radius:6px;object-fit:cover;">`;
+            }
+        } catch (err) { console.error('load seller profile err', err); }
+    })();
 }
 
 function closeDetailModal() {
     const modal = document.getElementById('itemDetailModal');
     modal.classList.remove('active');
+    // remove modal-open guard and allow background to scroll again
+    document.body.classList.remove('modal-open');
+    // clear content after close animation to avoid stale DOM
+    setTimeout(() => {
+        if (!modal.classList.contains('active')) modal.innerHTML = '';
+    }, 300);
 }
 
 function selectPaymentMethod(method, sellerId, phone) {
     if (method === 'cod') {
         alert(`Metode: COD\nSeller ID: ${sellerId}\n\nHubungi penjual untuk konfirmasi pesanan.`);
-    } else if (method === 'whatsapp') {
-        const waLink = `https://wa.me/${phone}?text=Halo! Saya ingin menghubungi Anda tentang barang lelang yang saya menangkan. Seller ID: ${sellerId}`;
+        return;
+    }
+
+    if (method === 'whatsapp') {
+        if (!phone) return alert('Nomor WhatsApp penjual tidak tersedia');
+        // prefill message with item & buyer info if possible
+        const buyerName = currentUser && currentUser.name ? currentUser.name : (currentUserEmail || 'Pembeli');
+        const defaultMsg = encodeURIComponent(`Halo, saya ${buyerName} ingin mengonfirmasi pembayaran untuk barang lelang (Seller ID: ${sellerId}). Mohon informasikan detail pembayaran dan alamat pengiriman.`);
+        const waLink = `https://wa.me/${phone}?text=${defaultMsg}`;
         window.open(waLink, '_blank');
+
+        // Ask buyer to confirm they've contacted seller — then create a payment record with method 'whatsapp' (no proof)
+        setTimeout(async () => {
+            const proceed = confirm('Klik OK setelah Anda mengirim pesan WhatsApp dan mengonfirmasi pembayaran dengan penjual.');
+            if (!proceed) return;
+            try {
+                // try to find current item id and current bid amount; fallback to 0
+                const itemIdEl = document.querySelector('.modal-detail') && document.querySelector('.modal-detail').dataset && document.querySelector('.modal-detail').dataset.itemId;
+                const itemId = itemIdEl || null;
+                const amount = document.getElementById('detailCurrentBid') ? document.getElementById('detailCurrentBid').textContent.replace(/[^0-9]/g,'') : 0;
+                const userRaw = localStorage.getItem('user');
+                if (!userRaw) return alert('Anda harus login untuk melakukan pembayaran');
+                const user = JSON.parse(userRaw);
+                await fetch('/api/payments', { method: 'POST', body: new URLSearchParams({ itemId: itemId || '', userId: user.id, amount: amount || 0, method: 'whatsapp' })});
+                alert('Permintaan pembayaran WhatsApp dikirim. Status item diperbarui.');
+                // refresh items
+                loadItemsFromServer();
+            } catch (err) { console.error(err); alert('Gagal mengonfirmasi pembayaran'); }
+        }, 500);
+        return;
     }
 }
 
 
-function updateItemTimer(endTime) {
-    const timerElement = document.getElementById('detailItemTimer');
-    const timer = setInterval(() => {
-        const timeLeft = new Date(endTime) - new Date();
-        if (timeLeft <= 0) {
-            clearInterval(timer);
-            timerElement.textContent = 'Lelang Berakhir';
-            return;
-        }
-        
-        const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
-        
-        timerElement.textContent = `${days}h ${hours}j ${minutes}m ${seconds}d`;
-    }, 1000);
-}
-
-function loadBidHistory(itemId) {
-    const historyElement = document.getElementById('detailBidHistory');
-    
-    historyElement.innerHTML = `
-        <div class="bid-history-item">
-            <span class="bidder">User123</span>
-            <span class="bid-amount">Rp 5.000.000</span>
-            <span class="bid-time">2 menit yang lalu</span>
+// Open edit modal prefilled with item's data
+function openEditItemModal(itemId) {
+    const item = getItemById(itemId);
+    if (!item) return alert('Item tidak ditemukan');
+    const modal = document.getElementById('itemDetailModal');
+    const editHTML = `
+        <div class="modal-content">
+            <h3>Edit Item</h3>
+            <form id="editItemForm">
+                <div class="form-group"><label>Nama</label><input name="name" class="form-input" value="${item.name}"></div>
+                <div class="form-group"><label>Deskripsi</label><textarea name="description" class="form-textarea">${item.description}</textarea></div>
+                <div class="form-group"><label>Harga Awal</label><input name="price" type="number" class="form-input" value="${item.price}"></div>
+                <div class="form-group"><label>Selesai Pada (ISO)</label><input name="endTime" class="form-input" value="${item.endTime}"></div>
+                <div class="form-group"><label>Gambar</label><input name="image" type="file" class="form-input"></div>
+                <div style="text-align:right; margin-top:8px;">
+                    <button class="btn btn-secondary" type="button" onclick="closeDetailModal()">Batal</button>
+                    <button class="btn btn-primary" type="submit">Simpan Perubahan</button>
+                </div>
+            </form>
         </div>
     `;
+    modal.innerHTML = editHTML;
+    modal.classList.add('active');
+
+    const form = document.getElementById('editItemForm');
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        formData.append('sellerId', currentUser && currentUser.id ? currentUser.id : '');
+        try {
+            const res = await fetch(`/api/items/${itemId}`, { method: 'PUT', body: formData });
+            const body = await res.json();
+            if (!res.ok) return alert(body.error || 'Gagal menyimpan item');
+            alert('Item diperbarui');
+            modal.classList.remove('active');
+            loadItemsFromServer();
+        } catch (err) { console.error(err); alert('Gagal terhubung ke server'); }
+    });
+}
+
+// Open modal for selecting winner
+async function openSelectWinnerModal(itemId) {
+    const modal = document.getElementById('itemDetailModal');
+    modal.innerHTML = '<div class="modal-content"><h3>Pilih Pemenang</h3><div id="winnerList">Memuat bids...</div><div style="text-align:right; margin-top:8px;"><button class="btn btn-secondary" onclick="closeDetailModal()">Tutup</button></div></div>';
+    modal.classList.add('active');
+    try {
+        const res = await fetch('/api/bids?itemId=' + itemId);
+        const bids = await res.json();
+        const list = document.getElementById('winnerList');
+        if (!bids.length) { list.innerHTML = '<p>Tidak ada bid</p>'; return; }
+        // fetch user profiles for display
+        const entries = await Promise.all(bids.map(async b => {
+            try {
+                const ures = await fetch(`/api/users/${b.userId}`);
+                const ubody = ures.ok ? await ures.json() : null;
+                const user = ubody && ubody.user ? ubody.user : null;
+                return { bid: b, user };
+            } catch (e) { return { bid: b, user: null }; }
+        }));
+        list.innerHTML = entries.map(e => {
+            const b = e.bid; const u = e.user;
+            const displayName = u && u.name ? `${u.name} (${u.email || u.id})` : `User ${b.userId}`;
+            return `<div class="bid-card"><div class="bid-details"><strong>${displayName}</strong> - Rp ${formatPrice(b.amount)}</div><div style="text-align:right;"><button class="btn btn-primary" onclick="selectWinner(${itemId}, ${b.userId}, ${b.id})">Pilih</button></div></div>`;
+        }).join('');
+    } catch (err) { console.error(err); document.getElementById('winnerList').innerHTML = '<p>Gagal memuat bids</p>'; }
+}
+
+async function selectWinner(itemId, winnerId, bidId) {
+    if (!confirm('Pilih user ini sebagai pemenang?')) return;
+    try {
+        const res = await fetch(`/api/items/${itemId}/select-winner`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ sellerId: currentUser && currentUser.id ? currentUser.id : '', winnerId, bidId }) });
+        const body = await res.json();
+        if (!res.ok) return alert(body.error || 'Gagal memilih pemenang');
+        alert('Pemenang berhasil dipilih');
+        closeDetailModal();
+        loadItemsFromServer();
+    } catch (err) { console.error(err); alert('Gagal terhubung ke server'); }
+}
+
+
+function updateItemTimer(endTime) {
+    // handle both possible timer IDs used across templates
+    const ids = ['detailItemTimer', 'detailModalTimer'];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        // clear previous timer if any
+        if (el._auctionTimer) clearInterval(el._auctionTimer);
+        el._auctionTimer = setInterval(() => {
+            const diff = new Date(endTime) - new Date();
+            if (diff <= 0) {
+                el.textContent = 'Lelang Berakhir';
+                clearInterval(el._auctionTimer);
+                return;
+            }
+            const days = Math.floor(diff / (1000*60*60*24));
+            const hours = Math.floor((diff % (1000*60*60*24)) / (1000*60*60));
+            const minutes = Math.floor((diff % (1000*60*60)) / (1000*60));
+            const seconds = Math.floor((diff % (1000*60)) / 1000);
+            if (days > 0) el.textContent = `${days}h ${hours}j ${minutes}m ${seconds}s`;
+            else if (hours > 0) el.textContent = `${hours}j ${minutes}m ${seconds}s`;
+            else el.textContent = `${minutes}m ${seconds}s`;
+        }, 1000);
+    });}
+
+async function loadBidHistory() {
+    const userRaw = localStorage.getItem('user');
+    if (!userRaw) return;
+    const user = JSON.parse(userRaw);
+
+    const container = document.getElementById('bidHistory');
+    if (!container) {
+        console.warn('bidHistory container not found in DOM');
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/bids?userId=${user.id}`);
+        if (!res.ok) {
+            console.error('loadBidHistory failed', res.status);
+            container.innerHTML = `<div class="empty-state"><h3>Error loading bids</h3></div>`;
+            return;
+        }
+        const data = await res.json();
+        // support both old array response and new `{ bids: [...] }` response
+        const bids = Array.isArray(data) ? data : (data.bids || []);
+
+        if (!bids || bids.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-gavel"></i></div>
+                    <div class="empty-title">Belum Ada Penawaran</div>
+                    <div class="empty-text">Mulai ikut lelang untuk melihat riwayat penawaran Anda</div>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = '';
+        for (const bid of bids) {
+            let dateStr = bid.time || bid.createdAt || new Date().toISOString();
+            let displayDate = 'N/A';
+            try { displayDate = new Date(dateStr).toLocaleString('id-ID'); } catch (e) { console.warn('Date parse error for:', dateStr); }
+
+            const itemTitle = bid.itemTitle || bid.name || 'Item';
+            const itemImage = bid.itemImage || bid.image || 'default.png';
+            const sellerName = bid.sellerName || '';
+            const sellerPhone = bid.sellerPhone || '';
+            const yourBid = formatPrice(bid.amount || 0);
+            const highest = formatPrice(bid.highestBid || bid.currentPrice || 0);
+
+            // determine status badge (win if item sold/pending and winner is current user)
+            let statusBadge = '';
+            if ((bid.itemStatus === 'sold' || bid.itemStatus === 'pending_payment') && String(bid.itemWinnerId) === String(user.id)) {
+                statusBadge = '<span class="badge status-win">MENANG</span>';
+            } else if (bid.itemStatus === 'sold' || bid.itemStatus === 'pending_payment') {
+                statusBadge = '<span class="badge status-lost">LEPAS</span>';
+            } else if (bid.itemStatus === 'expired') {
+                statusBadge = '<span class="badge status-expired">EXPIRED</span>';
+            }
+
+            // if there's a recorded winner for this item, fetch their name to display
+            let winnerRow = '';
+            if (bid.itemWinnerId) {
+                try {
+                    const wres = await fetch(`/api/users/${bid.itemWinnerId}`);
+                    if (wres.ok) {
+                        const wbody = await wres.json();
+                        const winnerName = (wbody && wbody.user && wbody.user.name) ? wbody.user.name : `User ${bid.itemWinnerId}`;
+                        winnerRow = `<div class="seller-row"><strong>Pemenang:</strong> ${winnerName}</div>`;
+                    }
+                } catch (e) { console.warn('Failed to fetch winner name', e); }
+            }
+
+            const bidCard = `
+                <div class="bid-card">
+                    <div class="bid-left">
+                        <img src="${itemImage}" alt="${itemTitle}" class="bid-image" onerror="this.src='default.png'">
+                    </div>
+                    <div class="bid-body">
+                        <div class="bid-top">
+                            ${statusBadge}
+                            <h3 class="bid-title">${itemTitle}</h3>
+                            <div class="bid-sub">${(bid.itemDescription || '').slice(0, 120)}</div>
+                        </div>
+
+                        <div class="bid-meta">
+                            <div class="meta-left">
+                                <div class="meta-label">Bid Anda</div>
+                                <div class="meta-value">${yourBid}</div>
+                            </div>
+                        </div>
+
+                        ${sellerName ? `<div class="seller-row"><strong>Penjual:</strong> ${sellerName}${sellerPhone ? ` &middot; ${sellerPhone}` : ''}</div>` : ''}
+                        ${winnerRow}
+                    </div>
+
+                    <div class="bid-right">
+                        <div class="right-label">Bid Tertinggi Saat Ini</div>
+                        <div class="right-value">${highest}</div>
+                    </div>
+                </div>`;
+
+            container.insertAdjacentHTML('beforeend', bidCard);
+        }
+
+        setupLiquidScrollForElements();
+    } catch (err) {
+        console.error('loadBidHistory error:', err);
+        container.innerHTML = `<div class="empty-state"><h3>Error: ${err.message}</h3></div>`;
+    }
 }
 
 function createAuctionItem(item) {
-
-    itemElement.addEventListener('click', () => openItemDetail(item.id));
-
+    // create card element and attach click safely
+    const card = createAuctionCard(item, wishlist.some(w => w.id === item.id));
+    card.addEventListener('click', () => openItemDetail(item.id));
+    return card;
 }
 
 function formatCurrency(amount) {
@@ -753,6 +1207,55 @@ function formatCurrency(amount) {
 function getItemById(id) {
     return auctionItems.find(i => i.id === id) || null;
 }
+
+// Handle Add Item form submission (upload + fields -> /api/items)
+document.addEventListener('DOMContentLoaded', () => {
+    const addItemForm = document.getElementById('addItemForm');
+    if (!addItemForm) return;
+
+    addItemForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const userRaw = localStorage.getItem('user');
+        if (!userRaw) { alert('Harus login untuk menambahkan barang'); return; }
+        const user = JSON.parse(userRaw);
+
+        const name = document.getElementById('itemName').value.trim();
+        const description = document.getElementById('itemDescription').value.trim();
+        const price = document.getElementById('itemPrice').value;
+        const endTime = document.getElementById('itemEndTime').value;
+        const imageInput = document.getElementById('itemImage');
+        const categories = Array.from(document.querySelectorAll('.item-category-checkbox:checked')).map(c => c.value);
+
+        if (!name || !price || !endTime) { alert('Mohon lengkapi nama, harga, dan waktu berakhir'); return; }
+
+        const formData = new FormData();
+        formData.append('name', name);
+        formData.append('description', description);
+        formData.append('price', price);
+        formData.append('endTime', endTime);
+        formData.append('sellerId', user.id);
+        formData.append('categories', JSON.stringify(categories));
+        if (imageInput && imageInput.files && imageInput.files[0]) formData.append('image', imageInput.files[0]);
+
+        try {
+            const res = await fetch('/api/items', { method: 'POST', body: formData });
+            const body = await res.json().catch(() => ({}));
+            console.log('addItem response:', res.status, body);
+            if (!res.ok) return alert(body.error || 'Gagal menambahkan item');
+
+            showNotification('Item berhasil ditambahkan!');
+            addItemForm.reset();
+            // refresh items and navigate to home
+            await loadItemsFromServer();
+            const homeLink = document.querySelector('.nav-link[data-page="home"]');
+            if (homeLink) homeLink.click();
+        } catch (err) {
+            console.error('addItem error', err);
+            alert('Gagal terhubung ke server');
+        }
+    });
+});
 
 function showNotification(message) {
     const notification = document.createElement('div');
@@ -945,46 +1448,131 @@ function updateFilterChips() {
 
 function setupSidebarToggle() {
     const toggleBtn = document.getElementById('sidebarToggle');
+    const mobileNavBtn = document.getElementById('mobileNavToggle');
     const sidebar = document.querySelector('.category-sidebar');
     const closeBtn = document.getElementById('sidebarClose');
+    const navMenu = document.querySelector('.nav-menu');
 
     if (!toggleBtn || !sidebar) return;
 
+    // mobile overlay DOM element (created once)
+    let mobileOverlay = document.getElementById('mobileOverlay');
+    if (!mobileOverlay) {
+        mobileOverlay = document.createElement('div');
+        mobileOverlay.id = 'mobileOverlay';
+        document.body.appendChild(mobileOverlay);
+    }
+
+    function setBodyOverlay(open) {
+        document.body.classList.toggle('mobile-menu-open', open);
+        if (mobileOverlay) mobileOverlay.classList.toggle('active', open);
+    }
+
+    function resetMobilePanels() {
+        if (sidebar) { sidebar.classList.remove('active'); sidebar.style.visibility = ''; }
+        if (navMenu) { navMenu.classList.remove('active'); navMenu.style.visibility = ''; }
+        document.body.classList.remove('mobile-menu-open');
+    }
 
     function updateToggleVisibility() {
         if (window.innerWidth <= 768) {
             toggleBtn.style.display = 'block';
+            if (mobileNavBtn) mobileNavBtn.style.display = 'block';
         } else {
             toggleBtn.style.display = 'none';
-            sidebar.classList.remove('active');
+            if (mobileNavBtn) mobileNavBtn.style.display = 'none';
+            resetMobilePanels();
         }
     }
 
-    updateToggleVisibility();
-    window.addEventListener('resize', updateToggleVisibility);
+    // Relocate panels depending on viewport width
+    function relocatePanels() {
+        const navContainer = document.querySelector('.nav-container');
+        const homeWrapper = document.querySelector('.home-wrapper');
+        if (window.innerWidth <= 1000) {
+            if (navMenu && navMenu.parentElement !== document.body) document.body.appendChild(navMenu);
+            if (sidebar && sidebar.parentElement !== document.body) document.body.appendChild(sidebar);
+        } else {
+            if (navMenu && navContainer && navMenu.parentElement !== navContainer) navContainer.appendChild(navMenu);
+            if (sidebar && homeWrapper && sidebar.parentElement !== homeWrapper) {
+                homeWrapper.insertBefore(sidebar, homeWrapper.firstChild);
+                sidebar.classList.remove('active');
+            }
+            setBodyOverlay(false);
+        }
+    }
 
+    relocatePanels();
+    updateToggleVisibility();
+    window.addEventListener('resize', () => { relocatePanels(); updateToggleVisibility(); });
 
     toggleBtn.addEventListener('click', () => {
-        sidebar.classList.toggle('active');
+        const isActive = sidebar.classList.toggle('active');
+        setBodyOverlay(isActive);
+        toggleBtn.setAttribute('aria-expanded', String(isActive));
     });
 
+    // support touchstart as well for devices that prefer it (improves responsiveness)
+    toggleBtn.addEventListener('touchstart', (e) => { e.preventDefault(); toggleBtn.click(); }, { passive: false });
+
+    if (mobileNavBtn && navMenu) {
+        mobileNavBtn.addEventListener('click', () => {
+            const isActive = navMenu.classList.toggle('active');
+            setBodyOverlay(isActive);
+            mobileNavBtn.setAttribute('aria-expanded', String(isActive));
+        });
+        mobileNavBtn.addEventListener('touchstart', (e) => { e.preventDefault(); mobileNavBtn.click(); }, { passive: false });
+
+        navMenu.addEventListener('click', (e) => {
+            if (e.target.closest('.nav-link')) {
+                setTimeout(() => {
+                    navMenu.classList.remove('active');
+                    setBodyOverlay(false);
+                }, 250);
+            }
+        });
+    }
 
     closeBtn.addEventListener('click', () => {
         sidebar.classList.remove('active');
+        setBodyOverlay(false);
     });
-
 
     sidebar.addEventListener('click', (e) => {
         if (e.target.closest('.category-item')) {
             setTimeout(() => closeSidebarMobile(), 300);
         }
     });
+
+    // Global handler: ESC to close mobile panels; click outside to close
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            resetMobilePanels();
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth > 1000) return;
+        if (sidebar.classList.contains('active') && !e.target.closest('.category-sidebar') && !e.target.closest('#sidebarToggle')) {
+            resetMobilePanels();
+        }
+        if (navMenu && navMenu.classList.contains('active') && !e.target.closest('.nav-menu') && !e.target.closest('#mobileNavToggle')) {
+            resetMobilePanels();
+        }
+    });
+
+    if (mobileOverlay) {
+        mobileOverlay.addEventListener('click', () => resetMobilePanels());
+    }
+
+    resetMobilePanels();
 }
 
 function closeSidebarMobile() {
-    if (window.innerWidth <= 768) {
+    if (window.innerWidth <= 1000) {
         const sidebar = document.querySelector('.category-sidebar');
         if (sidebar) sidebar.classList.remove('active');
+        document.body.classList.remove('mobile-menu-open');
     }
 }
 
@@ -1029,9 +1617,74 @@ function renderAdminPanel() {
     });
 }
 
-function setCurrentUser(email) {
-    currentUser = {
-        email: email,
-        loginTime: new Date()
-    };
+function setCurrentUser(user) {
+    if (typeof user === 'string') {
+        currentUser = { email: user };
+        currentUserEmail = user;
+    } else {
+        currentUser = user || null;
+        currentUserEmail = user && user.email ? user.email : null;
+    }
+    console.log('✅ Current user set', currentUser);
 }
+
+function setAdminUser() {
+    isAdmin = true;
+    console.log('✅ Admin user set');
+    window.location.href = 'admin.html';
+}
+
+function logout() {
+    localStorage.removeItem('user');
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('isAdminLoggedIn');
+    window.location.href = 'index.html';
+}
+
+
+function logout() {
+    localStorage.removeItem('user');
+    localStorage.removeItem('isLoggedIn');
+    localStorage.removeItem('isAdminLoggedIn');
+    location.reload();
+}
+
+async function markAllRead() {
+    const unread = notifications.filter(n => n.readFlag === 0);
+    for (const n of unread) {
+        await markNotificationRead(n.id);
+    }
+    showAlert('Semua notifikasi ditandai dibaca', 'success');
+}
+
+(function() {
+    function toggleSidebar() {
+        const sidebar = document.querySelector('.category-sidebar');
+        const toggleBtn = document.getElementById('sidebarToggle');
+        if (!sidebar || !toggleBtn) return;
+        const isActive = sidebar.classList.toggle('active');
+        document.body.classList.toggle('mobile-menu-open', isActive);
+        toggleBtn.setAttribute('aria-expanded', String(isActive));
+        // hide other panel if open
+        const nav = document.querySelector('.nav-menu'); if (nav && nav.classList.contains('active')) { nav.classList.remove('active'); }
+    }
+    function toggleNav() {
+        const nav = document.querySelector('.nav-menu');
+        const mobileNavBtn = document.getElementById('mobileNavToggle');
+        if (!nav || !mobileNavBtn) return;
+        const isActive = nav.classList.toggle('active');
+        document.body.classList.toggle('mobile-menu-open', isActive);
+        mobileNavBtn.setAttribute('aria-expanded', String(isActive));
+        const sidebar = document.querySelector('.category-sidebar'); if (sidebar && sidebar.classList.contains('active')) { sidebar.classList.remove('active'); }
+    }
+
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('#sidebarToggle')) { toggleSidebar(); }
+        if (e.target.closest('#mobileNavToggle')) { toggleNav(); }
+    });
+
+    document.addEventListener('touchstart', (e) => {
+        if (e.target.closest('#sidebarToggle')) { e.preventDefault(); toggleSidebar(); }
+        if (e.target.closest('#mobileNavToggle')) { e.preventDefault(); toggleNav(); }
+    }, { passive: false });
+})();

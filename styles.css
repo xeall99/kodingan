@@ -80,6 +80,23 @@ nav {
     }
 }
 
+/* Secret admin access logo (used on login page) */
+.admin-secret-logo {
+    width: 90px;
+    height: auto;
+    object-fit: contain;
+    filter: grayscale(80%);
+    opacity: 0.95;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.25s ease, filter 0.25s ease;
+    display: inline-block;
+}
+.admin-secret-logo:hover { filter: none; transform: scale(1.05); }
+
+/* When the inline admin form is hidden, hide the divider too */
+.login-divider.hidden { display: none !important; }
+
 .logo {
     font-family: 'Playfair Display', serif;
     font-size: 1.8rem;
@@ -338,6 +355,8 @@ nav {
 .card-actions {
     display: flex;
     gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .btn {
@@ -352,6 +371,24 @@ nav {
     letter-spacing: 1px;
     text-transform: uppercase;
 }
+
+.card-actions .btn {
+    flex: 0 0 auto;
+}
+.card-actions .btn-primary {
+    flex: 1 1 auto; 
+}
+
+.card-actions .btn-secondary,
+.card-actions .btn-warning {
+    padding: 0.6rem 0.8rem;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.card-actions .btn-secondary { background: rgba(255,255,255,0.95); color: var(--deep-brown); border: 1px solid rgba(0,0,0,0.06); }
+.card-actions .btn-warning { background: linear-gradient(135deg, #f6b243, #d86b3a); color: white; border: none; }
 
 .btn-primary {
     background: linear-gradient(135deg, var(--gold) 0%, var(--maroon) 100%);
@@ -607,6 +644,142 @@ nav {
     background: var(--gold);
 }
 
+/* Mobile / off-canvas behavior for category sidebar */
+.category-sidebar {
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+/* Off-canvas hidden by default on small screens */
+@media (max-width: 1000px) {
+    /* Allow main content to use full viewport on small screens */
+    .container { max-width: 100%; padding: 0 0.8rem; }
+    .home-wrapper { gap: 1rem; }
+
+    /* Off-canvas category sidebar: hide by default, only show when .active */
+    .category-sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 80%;
+        max-width: 360px;
+        transform: translateX(-120%);
+        visibility: hidden;
+        opacity: 0;
+        z-index: 1200;
+        padding: 1.2rem;
+        background: white;
+        border-radius: 0 12px 12px 0;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+        overflow-y: auto;
+        max-height: 100vh;
+        transition: transform 0.35s ease, opacity 0.25s ease;
+    }
+    .category-sidebar.active {
+        transform: translateX(0);
+        visibility: visible;
+        opacity: 1;
+    }
+    .sidebar-close { display: block; }
+
+    /* Mobile nav menu overlay: hidden by default; shown when .active */
+    .nav-menu {
+        position: fixed;
+        top: 64px;
+        right: 0;
+        width: 72%;
+        max-width: 360px;
+        background: white;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+        transform: translateX(120%);
+        visibility: hidden;
+        opacity: 0;
+        transition: transform 0.35s ease, opacity 0.25s ease;
+        z-index: 1250;
+        display: flex;
+        flex-direction: column;
+        padding: 0.6rem 0.8rem;
+        gap: 6px;
+        pointer-events: none;
+    }
+    .nav-menu.active {
+        transform: translateX(0);
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+        z-index: 99999 !important;
+    }
+
+    /* Make nav items display like a sidebar: icon + label + optional badge */
+    .nav-menu li { list-style: none; }
+    .nav-menu .nav-link {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        color: var(--deep-brown);
+        background: transparent;
+        font-weight: 600;
+        text-decoration: none;
+    }
+    .nav-menu .nav-link i {
+        width: 28px;
+        text-align: center;
+        color: var(--gold);
+        font-size: 1.05rem;
+    }
+    .nav-menu .nav-link:hover {
+        background: rgba(168,161,65,0.06);
+        color: var(--maroon);
+    }
+
+    /* move badges inline for mobile menu */
+    .nav-menu .wishlist-badge, .nav-menu #notifBadge {
+        position: static;
+        margin-left: auto;
+        background: var(--maroon);
+        color: #fff;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+    }
+
+    /* show toggles and enlarge controls for touch */
+    .sidebar-toggle, .mobile-nav-toggle { display: block !important; }
+    .btn { padding: 12px 16px; }
+
+    /* Increase tappable area and ensure toggles sit above other elements */
+    .sidebar-toggle, .mobile-nav-toggle {
+        z-index: 1300;
+        padding: 10px;
+        min-width: 44px;
+        min-height: 44px;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        background: rgba(0,0,0,0.04);
+        pointer-events: auto;
+    }
+    .sidebar-toggle:active, .mobile-nav-toggle:active { background: rgba(0,0,0,0.08); }
+
+    /* Dim the page when sidebar or nav is open */
+    body.mobile-menu-open::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.45);
+        z-index: 1100;
+    }
+    /* prevent background scrolling when mobile panels are open */
+    body.mobile-menu-open { overflow: hidden; }
+
+    /* Force-hide side panels when not active to avoid visual clutter */
+    .category-sidebar:not(.active) { display: none !important; }
+    .nav-menu:not(.active) { display: none !important; }
+}
+
 
 .admin-row { 
     display: flex; 
@@ -786,7 +959,7 @@ nav {
     height: 100%;
     background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(5px);
-    z-index: 2000;
+    z-index: 99999;
     align-items: center;
     justify-content: center;
 }
@@ -794,9 +967,80 @@ nav {
 .modal.active {
     display: flex;
     animation: fadeIn 0.3s ease;
+    /* slightly stronger backdrop when a modal is active */
+    background: rgba(0,0,0,0.85);
 }
 
-.modal-content {
+/* Make the admin modal look like the white login popup */
+#adminLoginModal .modal-content {
+    background: white;
+    border-radius: 15px;
+    padding: 36px 32px;
+    max-width: 420px;
+    width: min(92%, 420px);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.35);
+    color: var(--deep-brown);
+    text-align: center;
+}
+
+#adminLoginModal .modal-header { 
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: var(--maroon);
+    margin-bottom: 0.5rem;
+}
+
+#adminLoginModal .modal-body p { color: var(--warm-gray); }
+
+#adminLoginModal .form-group { margin-top: 0.5rem; }
+
+#adminLoginModal .form-input { background: var(--cream); border-radius: 8px; }
+
+#adminLoginModal .modal-actions { display:flex; gap:0.8rem; justify-content:center; margin-top:1rem; }
+
+#adminLoginModal .btn-cancel { padding: 0.9rem 1.6rem; }
+#adminLoginModal .btn-primary { padding: 0.9rem 1.6rem; }
+
+/* Reuse admin modal styling for forgot/reset password modals */
+#forgotPasswordModal .modal-content,
+#resetPasswordModal .modal-content,
+#loginChoiceModal .modal-content {
+    background: white;
+    border-radius: 15px;
+    padding: 36px 32px;
+    max-width: 420px;
+    width: min(92%, 420px);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.35);
+    color: var(--deep-brown);
+    text-align: center;
+}
+#forgotPasswordModal .modal-header, #resetPasswordModal .modal-header, #loginChoiceModal .modal-header { 
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    color: var(--maroon);
+    margin-bottom: 0.5rem;
+}
+#forgotPasswordModal .modal-body p, #resetPasswordModal .modal-body p, #loginChoiceModal .modal-body p { color: var(--warm-gray); }
+#forgotPasswordModal .form-input, #resetPasswordModal .form-input { background: var(--cream); border-radius: 8px; }
+#forgotPasswordModal .modal-actions, #resetPasswordModal .modal-actions, #loginChoiceModal .modal-actions { display:flex; gap:0.8rem; justify-content:center; margin-top:1rem; }
+
+body.modal-open .category-sidebar { display: none !important; }
+body.modal-open .nav-menu { transform: translateX(110%) !important; }
+body.modal-open { overflow: hidden; }
+
+.modal .modal-content { position: relative; }
+
+.modal .modal-content:not(.modal-detail) {
+    max-width: 540px;
+    width: min(92%, 540px);
+    padding: 1.25rem 1.5rem;
+    border-radius: 14px;
+}
+
+.modal-content.modal-detail {
+    width: min(96%, 960px);
+    max-width: 960px;
+    margin: 0 auto;
     background: white;
     padding: 2.5rem;
     border-radius: 20px;
@@ -805,6 +1049,35 @@ nav {
     box-shadow: 0 15px 60px rgba(0, 0, 0, 0.4);
     animation: slideUp 0.3s ease;
 }
+
+/* top-right close button for modals (especially modal-detail) */
+.modal-close-top {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0,0,0,0.06);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.modal-close-top:hover { background: rgba(0,0,0,0.12); }
+
+.modal-content.modal-detail { position: relative; padding: 0; }
+
+.modal .modal-content {
+    background: #ffffff !important;
+    color: var(--deep-brown) !important;
+    border-radius: 14px !important;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.45) !important;
+}
+.modal .modal-content * { color: inherit !important; }
 
 
 .success-content {
@@ -1055,21 +1328,6 @@ nav {
     margin-bottom: 30px;
 }
 
-.logo-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.header-logo {
-    width: 50px;
-    height: 50px;
-    object-fit: contain;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-}
-
 .login-header h1 {
     color: #2c3e50;
     font-family: 'Playfair Display', serif;
@@ -1287,6 +1545,37 @@ nav {
         font-size: 0.9em;
     }
 
+    /* Small screens: make modals and login forms touch-friendly and stacked */
+    @media (max-width: 480px) {
+        .modal .modal-content {
+            width: calc(100% - 32px);
+            margin: 0 16px;
+            padding: 20px;
+            max-height: 92vh;
+            overflow-y: auto;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.28);
+        }
+        .modal .modal-actions {
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+        .modal .modal-actions .btn,
+        .modal .modal-actions .btn-primary,
+        .modal .modal-actions .btn-cancel {
+            width: 100%;
+        }
+        /* make sure primary button is prominent and easy to tap */
+        .modal .modal-actions .btn-primary { padding: 12px 16px; }
+
+        .login-container { padding: 12px; }
+        .login-box { padding: 20px; margin: 0 8px; max-width: 420px; }
+        .admin-secret-logo { width: 64px; }
+        .logo-icon { width: 44px; height: 44px; }
+        .nav-menu { gap: 0.6rem; }
+        .nav-link { padding: 0.4rem; font-size: 0.9rem; }
+        .logo { font-size: 1.1rem; }
+    }
     .item-detail-content {
         grid-template-columns: 1fr;
     }
@@ -1367,6 +1656,39 @@ nav {
     color: var(--primary-color);
 }
 
+/* Make generic .close (modal & admin) more visible and accessible */
+.modal .close {
+    position: absolute;
+    right: 14px;
+    top: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: #fff;
+    color: var(--maroon);
+    border-radius: 8px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    cursor: pointer;
+    z-index: 6000;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+
+.modal .close:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 36px rgba(0,0,0,0.16);
+    background: linear-gradient(180deg,#fff,#f7f7f7);
+}
+
+/* Fallback for dark-themed modals where white bg could blend: add outline */
+.modal.dark .close, .modal[data-theme="dark"] .close {
+    outline: 1px solid rgba(255,255,255,0.06);
+}
+
 .item-detail-content {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1442,6 +1764,58 @@ nav {
 }
 
 
+@media (max-width: 1000px) {
+    .container { padding: 1rem; }
+    .page-title { font-size: 2.2rem; }
+
+    .item-detail-page {
+        grid-template-columns: 1fr;
+        padding: 1.2rem;
+        gap: 1rem;
+    }
+    .detail-main-image {
+        height: 320px;
+        object-fit: cover;
+    }
+    .modal-detail {
+        max-width: 720px !important;
+    }
+    /* Make action buttons easier to tap on mobile */
+    .detail-actions {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .detail-actions .btn {
+        padding: 14px 18px;
+        width: 100%;
+    }
+    /* Nav menu transforms into an overlay panel */
+    .nav-menu {
+        position: fixed;
+        top: 64px;
+        right: 0;
+        width: 72%;
+        max-width: 360px;
+        background: white;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+        transform: translateX(110%);
+        transition: transform 0.35s ease;
+        z-index: 1250;
+        display: flex;
+        flex-direction: column;
+        padding: 1.2rem;
+        gap: 10px;
+    }
+    .nav-menu.active {
+        transform: translateX(0);
+    }
+    .nav-menu li { width: 100%; }
+    .nav-menu li a { display: block; padding: 12px; border-radius: 8px; }
+    /* Show the mobile toggles */
+    .sidebar-toggle, .mobile-nav-toggle { display: block !important; }
+    /* Make buttons larger site-wide for touch */
+    .btn { padding: 12px 16px; }
+}
 @media (max-width: 768px) {
     .success-card {
         grid-template-columns: 1fr;
@@ -1462,21 +1836,31 @@ nav {
 
 .item-detail-page {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    /* Keep right column (info) at a comfortable width and let left column (image) flex */
+    grid-template-columns: 1fr 420px;
     gap: 2rem;
     padding: 2.5rem;
+    align-items: start;
+    min-width: 320px;
 }
 
 .detail-image-section {
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(180deg, rgba(245,245,245,1), rgba(255,255,255,1));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 260px;
 }
 
 .detail-main-image {
+    /* Make image responsive and avoid leaving a large empty block when images are small */
     width: 100%;
-    height: 400px;
-    object-fit: cover;
+    height: auto;
+    max-height: 70vh;
+    object-fit: contain;
     display: block;
 }
 
@@ -1719,3 +2103,44 @@ nav {
         font-size: 1.6rem;
     }
 }
+
+#bidHistory {
+    display: block;
+    min-height: 200px;
+}
+
+.bid-card {
+    background: white;
+    padding: 1.25rem;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(30,30,30,0.06);
+    display: flex;
+    gap: 1.25rem;
+    align-items: stretch;
+    transition: all 0.28s ease;
+    margin-bottom: 1.6rem;
+    position: relative;
+}
+
+.bid-left { flex: 0 0 110px; display:flex; align-items:center; }
+.bid-image { width:100px; height:80px; object-fit:cover; border-radius:8px; box-shadow: 0 6px 18px rgba(0,0,0,0.06); }
+
+.bid-body { flex: 1 1 auto; display:flex; flex-direction:column; gap:10px; }
+.bid-top { display:flex; gap:12px; align-items:center; }
+.bid-title { margin:0; font-size:1.05rem; font-weight:700; color:var(--maroon); }
+.bid-sub { margin:0; color:var(--warm-gray); font-size:0.92rem; max-width:720px; }
+
+.badge { display:inline-block; padding:6px 10px; border-radius:12px; font-weight:700; font-size:0.78rem; color:#fff; }
+.status-win { background: #3fc37a; }
+.status-lost { background: #e35b5b; }
+
+.bid-meta { display:flex; gap:24px; align-items:center; margin-top:6px; }
+.meta-label { font-size:0.78rem; color:#999; }
+.meta-value { font-weight:700; color:var(--maroon); margin-top:4px; }
+.seller-row { font-size:0.9rem; color:#444; margin-top:6px; }
+
+.bid-right { flex: 0 0 210px; text-align:right; display:flex; flex-direction:column; justify-content:center; gap:6px; }
+.right-label { font-size:0.78rem; color:#bbb; }
+.right-value { font-weight:700; color:var(--maroon); font-size:1.05rem; }
+
+.bid-card:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }

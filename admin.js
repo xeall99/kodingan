@@ -14,6 +14,7 @@ const ADMIN_ID = 'ADMIN-12345';
 document.addEventListener('DOMContentLoaded', () => {
     initializeAdmin();
     loadItemsData();
+    loadPendingItems();
     setupEventListeners();
     renderItems();
 });
@@ -66,6 +67,36 @@ function setupEventListeners() {
             renderItems();
         });
     }
+
+    // Validation search and filter
+    const validationSearchInput = document.getElementById('validationSearchInput');
+    if (validationSearchInput) {
+        validationSearchInput.addEventListener('input', () => {
+            renderPendingItems();
+        });
+    }
+
+    const validationStatusFilter = document.getElementById('validationStatusFilter');
+    if (validationStatusFilter) {
+        validationStatusFilter.addEventListener('change', () => {
+            renderPendingItems();
+        });
+    }
+
+    // User search and filter
+    const userSearchInput = document.getElementById('userSearchInput');
+    if (userSearchInput) {
+        userSearchInput.addEventListener('input', () => {
+            renderUsers();
+        });
+    }
+
+    const userStatusFilter = document.getElementById('userStatusFilter');
+    if (userStatusFilter) {
+        userStatusFilter.addEventListener('change', () => {
+            renderUsers();
+        });
+    }
 }
 
 // SECTION NAVIGATION
@@ -101,6 +132,8 @@ function switchSection(sectionName) {
     } else if (sectionName === 'items') {
         loadItemsData();
         renderItems();
+    } else if (sectionName === 'validation') {
+        loadPendingItems();
     }
 }
 
@@ -473,43 +506,36 @@ function loadUsersFromStorage() {
 
 function renderUsers() {
     const usersList = document.getElementById('usersList');
-
     if (!usersList) return;
 
-    if (adminState.users.length === 0) {
+    const searchQuery = document.getElementById('userSearchInput')?.value.toLowerCase() || '';
+    const statusFilter = document.getElementById('userStatusFilter')?.value || '';
+
+    let filteredUsers = adminState.users || [];
+
+    if (searchQuery) {
+        filteredUsers = filteredUsers.filter(user =>
+            user.name?.toLowerCase().includes(searchQuery) ||
+            user.email?.toLowerCase().includes(searchQuery)
+        );
+    }
+
+    if (statusFilter) {
+        filteredUsers = filteredUsers.filter(user => (user.status || 'active') === statusFilter);
+    }
+
+    if (filteredUsers.length === 0) {
         usersList.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">👤</div>
-                <h3>Belum Ada Users</h3>
-                <p>Tidak ada user yang terdaftar di sistem.</p>
+                <h3>${searchQuery ? 'User Tidak Ditemukan' : 'Belum Ada Users'}</h3>
+                <p>${searchQuery ? 'Coba cari dengan kata kunci lain' : 'Tidak ada user yang terdaftar di sistem.'}</p>
             </div>
         `;
         return;
     }
 
-    usersList.innerHTML = adminState.users.map(user => createUserCard(user)).join('');
-}
-
-function createUserCard(user) {
-    const initials = (user.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase();
-    const joinDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString('id-ID') : 'N/A';
-
-    return `
-        <div class="user-card">
-            <div class="user-info-details">
-                <div class="user-avatar">${initials}</div>
-                <div class="user-details">
-                    <h3>${user.name}</h3>
-                    <p>📧 ${user.email}</p>
-                    <p>📞 ${user.phone || '-'}</p>
-                    <p>📅 Bergabung: ${joinDate}</p>
-                </div>
-                <button class="btn btn-danger" style="align-self: flex-start; margin-left: auto;" onclick="deleteUser(${user.id}, '${user.name.replace(/'/g, "\\'")}')">
-                    🗑️ Hapus
-                </button>
-            </div>
-        </div>
-    `;
+    usersList.innerHTML = filteredUsers.map(user => createUserCard(user)).join('');
 }
 
 async function deleteUser(userId, userName) {
@@ -582,4 +608,436 @@ function logoutAdmin() {
 // UTILITY FUNCTIONS
 function getItemById(id) {
     return adminState.items.find(item => item.id === id);
+}
+
+// ==================== ITEM VALIDATION FUNCTIONS ====================
+
+let currentValidationItem = null;
+
+async function loadPendingItems() {
+    try {
+        const res = await fetch('/api/admin/items/pending', {
+            headers: { 'x-admin-id': ADMIN_ID }
+        });
+        const data = await res.json();
+        
+        if (res.ok) {
+            adminState.pendingItems = data.items || [];
+        } else {
+            adminState.pendingItems = [];
+        }
+        
+        renderPendingItems();
+    } catch (err) {
+        console.error('Load pending items error:', err);
+        adminState.pendingItems = [];
+        renderPendingItems();
+    }
+}
+
+function renderPendingItems() {
+    const validationList = document.getElementById('validationList');
+    if (!validationList) return;
+
+    const searchQuery = document.getElementById('validationSearchInput')?.value.toLowerCase() || '';
+    const statusFilter = document.getElementById('validationStatusFilter')?.value || '';
+
+    let filteredItems = adminState.pendingItems || [];
+
+    if (searchQuery) {
+        filteredItems = filteredItems.filter(item =>
+            item.name?.toLowerCase().includes(searchQuery) ||
+            item.seller?.toLowerCase().includes(searchQuery)
+        );
+    }
+
+    if (statusFilter) {
+        filteredItems = filteredItems.filter(item => item.status === statusFilter);
+    }
+
+    if (filteredItems.length === 0) {
+        validationList.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon">📭</div>
+                <h3>Tidak Ada Item Pending</h3>
+                <p>Semua item telah divalidasi.</p>
+            </div>
+        `;
+        return;
+    }
+
+    validationList.innerHTML = filteredItems.map(item => `
+        <div class="validation-card ${item.status}">
+            <div class="validation-card-header">
+                <div class="validation-status">
+                    <span class="status-badge ${item.status}">${item.status.toUpperCase()}</span>
+                    <span class="upload-date">${new Date(item.uploadDate).toLocaleDateString('id-ID')}</span>
+                </div>
+                <div class="seller-info">
+                    👤 ${item.seller} (ID: ${item.sellerId})
+                </div>
+            </div>
+
+            <div class="validation-card-content">
+                <h3>${item.name}</h3>
+                <p class="item-category">${(item.categories || []).join(', ')}</p>
+                <p class="item-desc">${item.description?.substring(0, 100)}...</p>
+                <div class="item-specs">
+                    <div class="spec">📦 Rp ${item.price?.toLocaleString()}</div>
+                    <div class="spec">🖼️ ${item.images?.length || 1} foto</div>
+                    <div class="spec">⏰ Berakhir: ${new Date(item.endTime).toLocaleDateString('id-ID')}</div>
+                </div>
+            </div>
+
+            <div class="validation-card-actions">
+                <button class="btn btn-primary" onclick="openValidationDetail(${item.id})">
+                    👁️ Lihat Detail
+                </button>
+                ${item.status === 'pending' ? `
+                    <button class="btn btn-success" onclick="quickApproveItem(${item.id})">✅ Terima</button>
+                    <button class="btn btn-danger" onclick="quickRejectItem(${item.id})">❌ Tolak</button>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function openValidationDetail(itemId) {
+    currentValidationItem = (adminState.pendingItems || []).find(item => item.id === itemId);
+    if (!currentValidationItem) return;
+
+    const modal = document.getElementById('validationModal');
+    const detailsDiv = document.getElementById('validationItemDetails');
+    const previewDiv = document.getElementById('validationImagePreview');
+
+    detailsDiv.innerHTML = `
+        <div class="validation-details">
+            <h3>${currentValidationItem.name}</h3>
+            <div class="details-grid">
+                <div class="detail-item">
+                    <label>Penjual:</label>
+                    <span>${currentValidationItem.seller}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Harga:</label>
+                    <span>Rp ${currentValidationItem.price?.toLocaleString()}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Kategori:</label>
+                    <span>${(currentValidationItem.categories || []).join(', ')}</span>
+                </div>
+                <div class="detail-item">
+                    <label>Durasi Lelang:</label>
+                    <span>${new Date(currentValidationItem.endTime).toLocaleDateString('id-ID')}</span>
+                </div>
+            </div>
+            <div class="detail-description">
+                <label>Deskripsi:</label>
+                <p>${currentValidationItem.description}</p>
+            </div>
+            <div class="detail-specs">
+                <label>Spesifikasi:</label>
+                <p>${currentValidationItem.spec || '-'}</p>
+                <label>Detail Kondisi:</label>
+                <p>${currentValidationItem.condition || '-'}</p>
+                <label>Tahun Dibeli:</label>
+                <p>${currentValidationItem.yearBought || '-'}</p>
+            </div>
+        </div>
+    `;
+
+    previewDiv.innerHTML = `
+        <h4>Foto Barang (${currentValidationItem.images?.length || 1} foto)</h4>
+        <div class="image-gallery">
+            ${(currentValidationItem.images || []).map((img, idx) => `
+                <div class="gallery-item">
+                    <img src="${img}" alt="Foto ${idx + 1}">
+                    <span>${idx + 1}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+
+async function approveItem() {
+    if (!currentValidationItem) return;
+
+    const notes = document.getElementById('validationNotes').value;
+
+    try {
+        const res = await fetch(`/api/admin/items/${currentValidationItem.id}/approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-id': ADMIN_ID
+            },
+            body: JSON.stringify({ notes })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            showToast(`❌ ${data.error}`, 'error');
+            return;
+        }
+
+        showToast('✅ Item disetujui dan dipublikasikan!', 'success');
+        closeValidationModal();
+        loadPendingItems();
+    } catch (err) {
+        console.error('Approve item error:', err);
+        showToast('❌ Gagal menyetujui item', 'error');
+    }
+}
+
+async function rejectItem() {
+    if (!currentValidationItem) return;
+
+    const notes = document.getElementById('validationNotes').value;
+
+    if (!notes.trim()) {
+        alert('Mohon berikan alasan penolakan');
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/admin/items/${currentValidationItem.id}/reject`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-id': ADMIN_ID
+            },
+            body: JSON.stringify({ reason: notes })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            showToast(`❌ ${data.error}`, 'error');
+            return;
+        }
+
+        showToast('❌ Item ditolak dan notifikasi dikirim ke seller', 'success');
+        closeValidationModal();
+        loadPendingItems();
+    } catch (err) {
+        console.error('Reject item error:', err);
+        showToast('❌ Gagal menolak item', 'error');
+    }
+}
+
+function quickApproveItem(itemId) {
+    currentValidationItem = (adminState.pendingItems || []).find(item => item.id === itemId);
+    if (!currentValidationItem) return;
+
+    if (confirm(`Setujui item "${currentValidationItem.name}"?`)) {
+        approveItem();
+    }
+}
+
+function quickRejectItem(itemId) {
+    const reason = prompt('Masukkan alasan penolakan:');
+    if (!reason) return;
+
+    currentValidationItem = (adminState.pendingItems || []).find(item => item.id === itemId);
+    if (!currentValidationItem) return;
+
+    document.getElementById('validationNotes').value = reason;
+    rejectItem();
+}
+
+function closeValidationModal() {
+    document.getElementById('validationModal').style.display = 'none';
+    document.getElementById('validationNotes').value = '';
+}
+
+// ==================== USER PUNISHMENT FUNCTIONS ====================
+
+let currentPunishmentUser = null;
+
+function updateUserCard(user) {
+    const userCard = document.querySelector(`[data-user-id="${user.id}"]`);
+    if (userCard) {
+        const statusBadge = userCard.querySelector('.user-status');
+        if (statusBadge) {
+            statusBadge.textContent = user.status || 'active';
+            statusBadge.className = `user-status ${user.status || 'active'}`;
+        }
+    }
+}
+
+function openPunishmentModal(userId) {
+    const user = adminState.users.find(u => u.id === userId);
+    if (!user) return;
+
+    currentPunishmentUser = user;
+    const modal = document.getElementById('punishmentModal');
+    const userInfo = document.getElementById('punishmentUserInfo');
+
+    userInfo.innerHTML = `
+        <div class="user-info-card">
+            <div class="user-avatar">${(user.name || 'U').charAt(0).toUpperCase()}</div>
+            <div class="user-info-details">
+                <p><strong>${user.name}</strong></p>
+                <p>${user.email}</p>
+                <p>Status: <span class="user-status ${user.status || 'active'}">${user.status || 'Active'}</span></p>
+            </div>
+        </div>
+    `;
+
+    modal.style.display = 'flex';
+}
+
+async function applyPunishment() {
+    if (!currentPunishmentUser) return;
+
+    const type = document.getElementById('punishmentType').value;
+    const reason = document.getElementById('punishmentReason').value.trim();
+
+    if (!type) {
+        alert('Pilih tipe hukuman');
+        return;
+    }
+
+    if (!reason) {
+        alert('Masukkan alasan hukuman');
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/admin/users/${currentPunishmentUser.id}/punish`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-admin-id': ADMIN_ID
+            },
+            body: JSON.stringify({ type, reason })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            showToast(`❌ ${data.error}`, 'error');
+            return;
+        }
+
+        const durationText = type === 'freeze' ? '2 Hari' : 'Permanen';
+        showToast(`⚖️ ${currentPunishmentUser.name} ${type === 'freeze' ? 'dibekukan' : 'di-ban'} selama ${durationText}`, 'success');
+
+        // Update local state
+        const userIndex = adminState.users.findIndex(u => u.id === currentPunishmentUser.id);
+        if (userIndex !== -1) {
+            adminState.users[userIndex].status = type === 'freeze' ? 'frozen' : 'banned';
+            if (type === 'freeze') {
+                adminState.users[userIndex].frozenUntil = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+            }
+        }
+
+        closePunishmentModal();
+        renderUsers();
+    } catch (err) {
+        console.error('Apply punishment error:', err);
+        showToast('❌ Gagal menerapkan hukuman', 'error');
+    }
+}
+
+function closePunishmentModal() {
+    document.getElementById('punishmentModal').style.display = 'none';
+    document.getElementById('punishmentType').value = '';
+    document.getElementById('punishmentReason').value = '';
+}
+
+function closeReportsModal() {
+    document.getElementById('reportsModal').style.display = 'none';
+}
+
+// ==================== ENHANCED USER RENDERING ====================
+
+function createUserCard(user) {
+    const initials = (user.name || 'U').split(' ').map(n => n[0]).join('').toUpperCase();
+    const joinDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString('id-ID') : 'N/A';
+    const status = user.status || 'active';
+    const isFrozen = status === 'frozen' && user.frozenUntil;
+    const frozenDaysLeft = isFrozen ? Math.ceil((new Date(user.frozenUntil) - new Date()) / (24 * 60 * 60 * 1000)) : 0;
+
+    return `
+        <div class="user-card" data-user-id="${user.id}">
+            <div class="user-card-header">
+                <div class="user-avatar">${initials}</div>
+                <div class="user-basic-info">
+                    <h3>${user.name}</h3>
+                    <p>${user.email}</p>
+                    <span class="user-status ${status}">${status.toUpperCase()}${isFrozen && frozenDaysLeft > 0 ? ` (${frozenDaysLeft} hari)` : ''}</span>
+                </div>
+            </div>
+
+            <div class="user-card-details">
+                <div class="detail-row">
+                    <span>📞</span>
+                    <span>${user.phone || '-'}</span>
+                </div>
+                <div class="detail-row">
+                    <span>📅</span>
+                    <span>Bergabung: ${joinDate}</span>
+                </div>
+                <div class="detail-row">
+                    <span>📊</span>
+                    <span>${user.itemCount || 0} item | ${user.bidCount || 0} bid</span>
+                </div>
+            </div>
+
+            <div class="user-card-actions">
+                ${status !== 'banned' ? `
+                    <button class="btn btn-warning" onclick="openPunishmentModal(${user.id})">
+                        ⚖️ ${status === 'frozen' && frozenDaysLeft > 0 ? 'Ubah Hukuman' : 'Hukum'}
+                    </button>
+                ` : ''}
+                <button class="btn btn-secondary" onclick="viewUserReports(${user.id})">
+                    📢 Laporan
+                </button>
+                <button class="btn btn-danger" onclick="deleteUser(${user.id}, '${user.name.replace(/'/g, "\\'")}')">
+                    🗑️ Hapus
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+function viewUserReports(userId) {
+    const user = adminState.users.find(u => u.id === userId);
+    if (!user) return;
+
+    const reportsModal = document.getElementById('reportsModal');
+    const reportsList = document.getElementById('reportsList');
+
+    const userReports = (user.reports || []);
+
+    reportsList.innerHTML = userReports.length > 0 ? userReports.map(report => `
+        <div class="report-item">
+            <h4>Laporan dari ${report.reporterName}</h4>
+            <p class="report-reason"><strong>Alasan:</strong> ${report.reason}</p>
+            <p class="report-date">${new Date(report.date).toLocaleDateString('id-ID')}</p>
+        </div>
+    `).join('') : '<p>Belum ada laporan untuk user ini</p>';
+
+    reportsModal.style.display = 'flex';
+}
+
+// ==================== MODAL FUNCTIONS ====================
+
+function closeValidationModal() {
+    document.getElementById('validationModal').style.display = 'none';
+    document.getElementById('validationNotes').value = '';
+}
+
+function closePunishmentModal() {
+    document.getElementById('punishmentModal').style.display = 'none';
+    document.getElementById('punishmentType').value = '';
+    document.getElementById('punishmentReason').value = '';
+}
+
+function closeReportsModal() {
+    document.getElementById('reportsModal').style.display = 'none';
 }

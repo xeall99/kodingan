@@ -167,13 +167,18 @@ app.get('/api/items/:id', async (req, res) => {
 
 app.post('/api/items', upload.single('image'), async (req, res) => {
   try {
-    const { name, description, price, endTime, sellerId, categories } = req.body;
+    const { name, description, detail, spec, condition, yearBought, other, price, endTime, sellerId, categories } = req.body;
     if (!name || !price || !endTime || !sellerId) return res.status(400).json({ error: 'Nama, harga, endTime dan sellerId diperlukan' });
     const image = req.file ? `/uploads/${req.file.filename}` : null;
     const conn = await pool.getConnection();
-    const [r] = await conn.query('INSERT INTO items (name,image,description,price,endTime,sellerId,status) VALUES (?,?,?,?,?,?, "active")',
-      [name, image, description || '', price, endTime, sellerId]);
+    
+    // Insert item dengan status 'pending' untuk validasi admin
+    const [r] = await conn.query(
+      'INSERT INTO items (name, image, description, detail, spec, condition, yearBought, other, price, endTime, sellerId, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "pending")',
+      [name, image, description || '', detail || '', spec || '', condition || '', yearBought || '', other || '', price, endTime, sellerId]
+    );
     const itemId = r.insertId;
+    
     const catList = categories ? JSON.parse(categories) : [];
     for (const catName of catList) {
       const [cRow] = await conn.query('SELECT id FROM categories WHERE name = ?', [catName]);
@@ -186,7 +191,7 @@ app.post('/api/items', upload.single('image'), async (req, res) => {
       await conn.query('INSERT INTO item_categories (itemId, categoryId) VALUES (?,?)', [itemId, catId]);
     }
     conn.release();
-    res.json({ message: 'Item ditambahkan', itemId });
+    res.json({ message: 'Item ditambahkan dengan status Pending. Menunggu validasi admin...', itemId, status: 'pending' });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
@@ -681,6 +686,153 @@ app.get('/api/admin/items/recommended', async (req, res) => {
         res.json({ items });
     } catch (err) {
         console.error('GET /api/admin/items/recommended error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==================== ITEM VALIDATION ENDPOINTS ====================
+
+// Get pending items for validation
+app.get('/api/admin/items/pending', async (req, res) => {
+    if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
+    
+    try {
+        const conn = await pool.getConnection();
+        const [items] = await conn.query(`
+            SELECT * FROM items 
+            WHERE status = 'pending'
+            ORDER BY createdAt DESC
+        `);
+        conn.release();
+        
+        res.json({ items });
+    } catch (err) {
+        console.error('GET pending items error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Approve item
+app.post('/api/admin/items/:id/approve', async (req, res) => {
+    if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
+    
+    const { id } = req.params;
+    const { notes } = req.body;
+    
+    try {
+        const conn = await pool.getConnection();
+        
+        await conn.query(`
+            UPDATE items 
+            SET status = 'active', adminNotes = ?
+            WHERE id = ?
+        `, [notes || '', id]);
+        
+        // Get item for notification
+        const [item] = await conn.query('SELECT * FROM items WHERE id = ?', [id]);
+        
+        conn.release();
+        
+        res.json({ message: 'Item approved', item: item[0] });
+    } catch (err) {
+        console.error('Approve item error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Reject item
+app.post('/api/admin/items/:id/reject', async (req, res) => {
+    if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
+    
+    const { id } = req.params;
+    const { reason } = req.body;
+    
+    try {
+        const conn = await pool.getConnection();
+        
+        await conn.query(`
+            UPDATE items 
+            SET status = 'rejected', rejectionReason = ?
+            WHERE id = ?
+        `, [reason || '', id]);
+        
+        conn.release();
+        
+        res.json({ message: 'Item rejected' });
+    } catch (err) {
+        console.error('Reject item error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==================== USER PUNISHMENT ENDPOINTS ====================
+
+// Punish user (freeze or ban)
+app.post('/api/admin/users/:id/punish', async (req, res) => {
+    if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
+    
+    const { id } = req.params;
+    const { type, reason } = req.body;
+    
+    if (!['freeze', 'ban'].includes(type)) {
+        return res.status(400).json({ error: 'Invalid punishment type' });
+    }
+    
+    try {
+        const conn = await pool.getConnection();
+        
+        let query, params;
+        
+        if (type === 'freeze') {
+            const frozenUntil = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString();
+            query = `
+                UPDATE users 
+                SET status = 'frozen', frozenUntil = ?, punishmentReason = ?
+                WHERE id = ?
+            `;
+            params = [frozenUntil, reason, id];
+        } else {
+            query = `
+                UPDATE users 
+                SET status = 'banned', punishmentReason = ?
+                WHERE id = ?
+            `;
+            params = [reason, id];
+        }
+        
+        await conn.query(query, params);
+        
+        conn.release();
+        
+        res.json({ 
+            message: `User ${type === 'freeze' ? 'frozen' : 'banned'} successfully`,
+            punishmentType: type
+        });
+    } catch (err) {
+        console.error('Punish user error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get user reports
+app.get('/api/admin/users/:id/reports', async (req, res) => {
+    if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
+    
+    const { id } = req.params;
+    
+    try {
+        const conn = await pool.getConnection();
+        const [reports] = await conn.query(`
+            SELECT * FROM user_reports 
+            WHERE reportedUserId = ?
+            ORDER BY createdAt DESC
+        `, [id]);
+        
+        conn.release();
+        
+        res.json({ reports });
+    } catch (err) {
+        console.error('Get reports error:', err);
         res.status(500).json({ error: err.message });
     }
 });

@@ -258,6 +258,101 @@ nav {
     letter-spacing: 2px;
 }
 
+/* Search Bar Styling */
+.search-container-wrapper {
+    display: flex;
+    justify-content: center;
+    margin: 2rem 0 3rem 0;
+    width: 100%;
+}
+
+.search-box-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    width: 100%;
+    max-width: 500px;
+    position: relative;
+}
+
+.search-clear-left {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--charcoal);
+    transition: all 0.3s ease;
+    padding: 0.5rem;
+    min-width: 40px;
+    text-align: center;
+}
+
+.search-clear-left:hover {
+    color: var(--gold);
+    transform: scale(1.15);
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    background: white;
+    border: 2px solid var(--light-gold);
+    border-radius: 50px;
+    padding: 0.5rem 1.5rem;
+    width: 100%;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.search-box:focus-within {
+    border-color: var(--charcoal);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    color: var(--text-dark);
+    background: transparent;
+}
+
+.search-input::placeholder {
+    color: var(--text-muted);
+}
+
+.search-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: var(--charcoal);
+    transition: all 0.3s ease;
+    padding: 0.5rem;
+}
+
+.search-btn:hover {
+    color: var(--gold);
+    transform: scale(1.15);
+}
+
+@media (max-width: 600px) {
+    .search-container-wrapper {
+        margin: 1.5rem 0 2rem 0;
+    }
+    
+    .search-box-header {
+        max-width: 100%;
+    }
+    
+    .search-box {
+        padding: 0.5rem 1rem;
+    }
+}
+
 
 .auction-grid {
     display: grid;
@@ -492,6 +587,98 @@ nav {
     border-style: solid;
 }
 
+/* Multiple file upload wrapper */
+.file-input-wrapper-multiple {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--champagne), var(--light-gold));
+    border: 2px dashed var(--gold);
+    border-radius: 10px;
+    padding: 2.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.file-input-wrapper-multiple:hover {
+    background: var(--gold);
+    border-style: solid;
+}
+
+.file-input-wrapper-multiple input[type="file"] {
+    display: none;
+}
+
+.file-input-label-multiple {
+    color: var(--deep-brown);
+    font-weight: 600;
+}
+
+.file-input-label-multiple i {
+    color: var(--charcoal);
+    margin-bottom: 0.5rem;
+}
+
+.file-input-label-multiple p {
+    margin: 0.5rem 0 0 0;
+    font-size: 1rem;
+}
+
+/* Image preview container */
+#imagePreviewGrid {
+    gap: 1rem;
+}
+
+#imagePreviewGrid .image-preview-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+    border: 2px solid var(--cream);
+    aspect-ratio: 1;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#imagePreviewGrid .image-preview-item:hover {
+    border-color: var(--gold);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+#imagePreviewGrid .image-preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#imagePreviewGrid .image-preview-item .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: var(--gold);
+    color: white;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+#imagePreviewGrid .image-preview-item:hover .remove-btn {
+    opacity: 1;
+}
+
+#imagePreviewGrid .image-preview-item .remove-btn:hover {
+    background: var(--charcoal);
+    transform: scale(1.1);
+}
 
 .category-filters {
     display: flex;
@@ -499,22 +686,38 @@ nav {
     flex-wrap: wrap;
     justify-content: center;
     margin-bottom: 1.5rem;
-}
-.category-filters .filter-chip {
-    padding: 8px 12px;
-    background: rgba(255,255,255,0.85);
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(247, 231, 206, 0.4) 0%, rgba(255, 255, 255, 0.6) 100%);
+    border-radius: 15px;
     border: 1px solid var(--light-gold);
+}
+
+.category-filters .filter-chip {
+    padding: 10px 18px;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(245, 235, 220, 0.9));
+    border: 2px solid var(--light-gold);
     color: var(--deep-brown);
-    border-radius: 20px;
+    border-radius: 25px;
     cursor: pointer;
     font-weight: 600;
+    font-size: 0.95rem;
     transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+
+.category-filters .filter-chip:hover {
+    border-color: var(--charcoal);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
 .category-filters .filter-chip input { display: none; }
+
 .category-filters .filter-chip.active { 
-    background: linear-gradient(135deg, var(--gold), var(--maroon)); 
+    background: linear-gradient(135deg, var(--gold), var(--maroon));
     color: white;
-    border-color: var(--gold);
+    border-color: var(--charcoal);
+    box-shadow: 0 6px 16px rgba(170, 28, 28, 0.25);
 }
 
 
@@ -1079,6 +1282,133 @@ body.modal-open { overflow: hidden; }
 }
 .modal .modal-content * { color: inherit !important; }
 
+/* Notification Modal Styling */
+#notificationsModal .modal-content {
+    background: #ffffff !important;
+    color: var(--deep-brown) !important;
+    border-radius: 18px !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+    max-width: 600px !important;
+    width: min(95%, 600px) !important;
+    padding: 2rem !important;
+}
+
+#notificationsModal h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.8rem;
+    color: var(--maroon);
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+}
+
+#notificationsModal .close {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    background: rgba(0, 0, 0, 0.08);
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: var(--deep-brown);
+}
+
+#notificationsModal .close:hover {
+    background: rgba(0, 0, 0, 0.15);
+    transform: rotate(90deg);
+}
+
+#notificationsModal .btn-secondary {
+    background: linear-gradient(135deg, var(--charcoal), var(--maroon));
+    color: white;
+    border: none;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+#notificationsModal .btn-secondary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(27, 3, 3, 0.3);
+}
+
+#notificationsList {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+#notificationsList .bid-card {
+    background: linear-gradient(135deg, rgba(193, 164, 97, 0.08) 0%, rgba(255, 255, 255, 0.6) 100%) !important;
+    border-left: 4px solid var(--light-gold) !important;
+    border-radius: 10px !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+}
+
+#notificationsList .bid-card:hover {
+    background: linear-gradient(135deg, rgba(193, 164, 97, 0.15) 0%, rgba(255, 255, 255, 0.8) 100%) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+    transform: translateX(4px) !important;
+}
+
+#notificationsList .bid-card.status-outbid {
+    border-left-color: var(--gold) !important;
+    background: linear-gradient(135deg, rgba(241, 79, 79, 0.08) 0%, rgba(255, 255, 255, 0.6) 100%) !important;
+}
+
+#notificationsList .bid-card .btn {
+    background: linear-gradient(135deg, var(--charcoal), var(--maroon)) !important;
+    color: white !important;
+    border: none !important;
+    padding: 0.5rem 1rem !important;
+    font-size: 0.85rem !important;
+    border-radius: 6px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    font-weight: 500 !important;
+}
+
+#notificationsList .bid-card .btn:hover {
+    box-shadow: 0 4px 12px rgba(170, 28, 28, 0.3) !important;
+    transform: translateY(-1px) !important;
+}
+
+#notificationsList .bid-card .btn-secondary {
+    background: var(--cream) !important;
+    color: var(--warm-gray) !important;
+    border: 1px solid var(--light-gold) !important;
+}
+
+#notificationsList .bid-card .btn-secondary:hover {
+    background: var(--light-gold) !important;
+    color: var(--maroon) !important;
+}
+
+#notificationsList .bid-card > div:first-child {
+    color: var(--deep-brown) !important;
+}
+
+#notificationsList .bid-card > div:first-child > div:first-child {
+    color: var(--deep-brown) !important;
+    font-weight: 600 !important;
+}
+
+#notificationsList .bid-card > div:first-child > div:last-child {
+    color: var(--text-muted) !important;
+    font-size: 0.85rem !important;
+}
+
+#notificationsList .empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-muted);
+}
 
 .success-content {
     display: flex;

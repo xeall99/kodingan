@@ -842,6 +842,36 @@ function openItemDetailModal(itemId) {
                     <p>${item.description}</p>
                 </div>
                 
+                <!-- Detail -->
+                ${item.detail ? `<div class="detail-section">
+                    <h3><i class="fas fa-list"></i> Detail</h3>
+                    <p>${item.detail}</p>
+                </div>` : ''}
+                
+                <!-- Spesifikasi -->
+                ${item.spec ? `<div class="detail-section">
+                    <h3><i class="fas fa-cogs"></i> Spesifikasi</h3>
+                    <p>${item.spec}</p>
+                </div>` : ''}
+                
+                <!-- Kondisi -->
+                ${item.condition ? `<div class="detail-section">
+                    <h3><i class="fas fa-star-half-alt"></i> Kemulusan/Kondisi</h3>
+                    <p><strong>${item.condition}</strong></p>
+                </div>` : ''}
+                
+                <!-- Tahun Dibeli -->
+                ${item.yearBought ? `<div class="detail-section">
+                    <h3><i class="fas fa-calendar"></i> Dibeli Tahun</h3>
+                    <p><strong>${item.yearBought}</strong></p>
+                </div>` : ''}
+                
+                <!-- Keterangan Lainnya -->
+                ${item.other ? `<div class="detail-section">
+                    <h3><i class="fas fa-sticky-note"></i> Keterangan Lainnya</h3>
+                    <p>${item.other}</p>
+                </div>` : ''}
+                
                 <!-- Seller Info -->
                 <div class="detail-section seller-info">
                     <h3><i class="fas fa-user-circle"></i> Informasi Penjual</h3>
@@ -988,6 +1018,11 @@ function openEditItemModal(itemId) {
             <form id="editItemForm">
                 <div class="form-group"><label>Nama</label><input name="name" class="form-input" value="${item.name}"></div>
                 <div class="form-group"><label>Deskripsi</label><textarea name="description" class="form-textarea">${item.description}</textarea></div>
+                <div class="form-group"><label>Detail</label><textarea name="detail" class="form-textarea">${item.detail || ''}</textarea></div>
+                <div class="form-group"><label>Spesifikasi</label><textarea name="spec" class="form-textarea">${item.spec || ''}</textarea></div>
+                <div class="form-group"><label>Kemulusan/Kondisi</label><select name="condition" class="form-input"><option value="">-- Pilih --</option><option value="Sangat Baik" ${item.condition === 'Sangat Baik' ? 'selected' : ''}>Sangat Baik (95-100%)</option><option value="Baik" ${item.condition === 'Baik' ? 'selected' : ''}>Baik (80-95%)</option><option value="Cukup Baik" ${item.condition === 'Cukup Baik' ? 'selected' : ''}>Cukup Baik (60-80%)</option><option value="Kurang Baik" ${item.condition === 'Kurang Baik' ? 'selected' : ''}>Kurang Baik (40-60%)</option><option value="Rusak" ${item.condition === 'Rusak' ? 'selected' : ''}>Rusak (&lt;40%)</option></select></div>
+                <div class="form-group"><label>Dibeli Tahun Berapa</label><input name="yearBought" type="number" class="form-input" value="${item.yearBought || ''}" min="1900" max="2100"></div>
+                <div class="form-group"><label>Keterangan Lainnya</label><textarea name="other" class="form-textarea">${item.other || ''}</textarea></div>
                 <div class="form-group"><label>Harga Awal</label><input name="price" type="number" class="form-input" value="${item.price}"></div>
                 <div class="form-group"><label>Selesai Pada (ISO)</label><input name="endTime" class="form-input" value="${item.endTime}"></div>
                 <div class="form-group"><label>Gambar</label><input name="image" type="file" class="form-input"></div>
@@ -1222,21 +1257,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const name = document.getElementById('itemName').value.trim();
         const description = document.getElementById('itemDescription').value.trim();
+        const detail = document.getElementById('itemDetail').value.trim();
+        const spec = document.getElementById('itemSpec').value.trim();
+        const condition = document.getElementById('itemCondition').value.trim();
+        const yearBought = document.getElementById('itemYearBought').value.trim();
+        const other = document.getElementById('itemOther').value.trim();
         const price = document.getElementById('itemPrice').value;
         const endTime = document.getElementById('itemEndTime').value;
-        const imageInput = document.getElementById('itemImage');
+        const imageInput = document.getElementById('itemImages');
         const categories = Array.from(document.querySelectorAll('.item-category-checkbox:checked')).map(c => c.value);
 
         if (!name || !price || !endTime) { alert('Mohon lengkapi nama, harga, dan waktu berakhir'); return; }
+        
+        // Validasi foto wajib minimal 4 dan maksimal 10
+        if (!imageInput || !imageInput.files || imageInput.files.length === 0) {
+            alert('Mohon upload minimal 4 foto barang (maksimal 10 foto)');
+            return;
+        }
+        
+        if (imageInput.files.length < 4) {
+            alert(`Mohon upload minimal 4 foto. Saat ini: ${imageInput.files.length} foto`);
+            return;
+        }
+        
+        if (imageInput.files.length > 10) {
+            alert(`Maksimal 10 foto. Saat ini: ${imageInput.files.length} foto`);
+            return;
+        }
+        
+        // Validasi ukuran file (max 5MB per file)
+        for (let i = 0; i < imageInput.files.length; i++) {
+            const file = imageInput.files[i];
+            if (file.size > 5 * 1024 * 1024) {
+                alert(`File ${file.name} terlalu besar (Max 5MB per file)`);
+                return;
+            }
+        }
 
         const formData = new FormData();
         formData.append('name', name);
         formData.append('description', description);
+        formData.append('detail', detail);
+        formData.append('spec', spec);
+        formData.append('condition', condition);
+        formData.append('yearBought', yearBought);
+        formData.append('other', other);
         formData.append('price', price);
         formData.append('endTime', endTime);
         formData.append('sellerId', user.id);
         formData.append('categories', JSON.stringify(categories));
-        if (imageInput && imageInput.files && imageInput.files[0]) formData.append('image', imageInput.files[0]);
+        
+        // Append multiple image files
+        for (let i = 0; i < imageInput.files.length; i++) {
+            formData.append('images', imageInput.files[i]);
+        }
 
         try {
             const res = await fetch('/api/items', { method: 'POST', body: formData });
@@ -1657,6 +1731,132 @@ async function markAllRead() {
     showAlert('Semua notifikasi ditandai dibaca', 'success');
 }
 
+// Handle multiple image uploads with preview
+document.addEventListener('DOMContentLoaded', () => {
+    const imageInput = document.getElementById('itemImages');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    const previewGrid = document.getElementById('imagePreviewGrid');
+    const imageCount = document.getElementById('imageCount');
+    const imageWarning = document.getElementById('imageWarning');
+    const clearImagesBtn = document.getElementById('clearImagesBtn');
+    const fileInputWrapper = document.querySelector('.file-input-wrapper-multiple');
+    
+    if (!imageInput) return;
+    
+    // Handle file selection
+    imageInput.addEventListener('change', (e) => {
+        const files = e.target.files;
+        updateImagePreview(files);
+    });
+    
+    // Handle drag and drop
+    fileInputWrapper.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        fileInputWrapper.style.borderColor = 'var(--charcoal)';
+        fileInputWrapper.style.background = 'rgba(193, 164, 97, 0.2)';
+    });
+    
+    fileInputWrapper.addEventListener('dragleave', () => {
+        fileInputWrapper.style.borderColor = 'var(--gold)';
+        fileInputWrapper.style.background = 'linear-gradient(135deg, var(--champagne), var(--light-gold))';
+    });
+    
+    fileInputWrapper.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileInputWrapper.style.borderColor = 'var(--gold)';
+        fileInputWrapper.style.background = 'linear-gradient(135deg, var(--champagne), var(--light-gold))';
+        
+        const files = e.dataTransfer.files;
+        imageInput.files = files;
+        
+        const event = new Event('change', { bubbles: true });
+        imageInput.dispatchEvent(event);
+    });
+    
+    fileInputWrapper.addEventListener('click', () => {
+        imageInput.click();
+    });
+    
+    // Clear images button
+    if (clearImagesBtn) {
+        clearImagesBtn.addEventListener('click', () => {
+            imageInput.value = '';
+            previewContainer.style.display = 'none';
+            previewGrid.innerHTML = '';
+            imageWarning.style.display = 'none';
+        });
+    }
+    
+    function updateImagePreview(files) {
+        previewGrid.innerHTML = '';
+        imageWarning.style.display = 'none';
+        
+        const fileCount = files.length;
+        imageCount.textContent = fileCount;
+        
+        // Validasi jumlah file
+        if (fileCount < 4) {
+            imageWarning.textContent = `⚠️ Minimal 4 foto diperlukan (Saat ini: ${fileCount})`;
+            imageWarning.style.display = 'block';
+            imageWarning.style.color = 'var(--gold)';
+        } else if (fileCount > 10) {
+            imageWarning.textContent = `⚠️ Maksimal 10 foto (Saat ini: ${fileCount})`;
+            imageWarning.style.display = 'block';
+            imageWarning.style.color = 'var(--gold)';
+        } else {
+            imageWarning.textContent = '✅ Jumlah foto sudah sesuai';
+            imageWarning.style.display = 'block';
+            imageWarning.style.color = 'var(--charcoal)';
+        }
+        
+        // Show preview if ada file
+        if (fileCount > 0) {
+            previewContainer.style.display = 'block';
+            
+            Array.from(files).forEach((file, index) => {
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    const previewItem = document.createElement('div');
+                    previewItem.className = 'image-preview-item';
+                    previewItem.innerHTML = `
+                        <img src="${e.target.result}" alt="Preview ${index + 1}">
+                        <button type="button" class="remove-btn" data-index="${index}" title="Hapus foto ini">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    `;
+                    
+                    previewGrid.appendChild(previewItem);
+                    
+                    const removeBtn = previewItem.querySelector('.remove-btn');
+                    removeBtn.addEventListener('click', (evt) => {
+                        evt.stopPropagation();
+                        removeImageByIndex(index);
+                    });
+                };
+                
+                reader.readAsDataURL(file);
+            });
+        } else {
+            previewContainer.style.display = 'none';
+        }
+    }
+    
+    function removeImageByIndex(indexToRemove) {
+        const dataTransfer = new DataTransfer();
+        const files = imageInput.files;
+        
+        for (let i = 0; i < files.length; i++) {
+            if (i !== indexToRemove) {
+                dataTransfer.items.add(files[i]);
+            }
+        }
+        
+        imageInput.files = dataTransfer.files;
+        updateImagePreview(imageInput.files);
+    }
+});
+
 (function() {
     function toggleSidebar() {
         const sidebar = document.querySelector('.category-sidebar');
@@ -1676,6 +1876,75 @@ async function markAllRead() {
         document.body.classList.toggle('mobile-menu-open', isActive);
         mobileNavBtn.setAttribute('aria-expanded', String(isActive));
         const sidebar = document.querySelector('.category-sidebar'); if (sidebar && sidebar.classList.contains('active')) { sidebar.classList.remove('active'); }
+    }
+
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const searchClearLeft = document.getElementById('searchClearLeft');
+    
+    if (searchInput && searchBtn) {
+        searchBtn.addEventListener('click', performSearch);
+        searchInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') performSearch();
+        });
+        
+        searchInput.addEventListener('input', (e) => {
+            if (e.target.value.trim()) {
+                if (searchClearLeft) searchClearLeft.style.display = 'block';
+            } else {
+                if (searchClearLeft) searchClearLeft.style.display = 'none';
+            }
+        });
+        
+        if (searchClearLeft) {
+            searchClearLeft.addEventListener('click', () => {
+                searchInput.value = '';
+                searchClearLeft.style.display = 'none';
+                performSearch();
+            });
+        }
+    }
+    
+    function performSearch() {
+        const query = searchInput.value.trim().toLowerCase();
+        const grid = document.getElementById('auctionGrid');
+        
+        if (!query) {
+            // If search is empty, show all items
+            renderAuctionItems();
+            return;
+        }
+        
+        // Filter items based on search query
+        const filteredItems = auctionItems.filter(item => {
+            const name = (item.name || '').toLowerCase();
+            const description = (item.description || '').toLowerCase();
+            const categories = (item.categories || []).map(c => c.toLowerCase()).join(' ');
+            
+            return name.includes(query) || description.includes(query) || categories.includes(query);
+        });
+        
+        grid.innerHTML = '';
+        
+        if (filteredItems.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-search"></i></div>
+                    <h2 class="empty-title">Tidak ada hasil pencarian</h2>
+                    <p class="empty-text">Coba gunakan kata kunci yang berbeda</p>
+                </div>
+            `;
+            return;
+        }
+        
+        filteredItems.forEach(item => {
+            const isWishlisted = wishlist.some(w => w.id === item.id);
+            const card = createAuctionCard(item, isWishlisted);
+            grid.appendChild(card);
+        });
+        
+        setupLiquidScrollForElements();
     }
 
     document.addEventListener('click', (e) => {

@@ -25,7 +25,11 @@
     <!-- Sidebar Navigation -->
     <aside class="sidebar">
         <nav class="nav-menu">
-            <a href="#" class="nav-item active" data-section="items">
+            <a href="#" class="nav-item active" data-section="validation">
+                <span class="icon">✅</span>
+                <span>Validasi Barang</span>
+            </a>
+            <a href="#" class="nav-item" data-section="items">
                 <span class="icon">📦</span>
                 <span>Kelola Items</span>
             </a>
@@ -42,8 +46,30 @@
 
     <!-- Main Content -->
     <main class="admin-main">
+        <!-- Item Validation Section (NEW) -->
+        <section id="validation-section" class="section-container active">
+            <div class="section-header">
+                <h2>Validasi Barang - Pending Konfirmasi</h2>
+                <p class="section-subtitle">Konfirmasi atau tolak barang yang diupload seller</p>
+            </div>
+
+            <div class="validation-filters">
+                <input type="text" id="validationSearchInput" class="search-box" placeholder="Cari barang atau seller...">
+                <select id="validationStatusFilter" class="filter-select">
+                    <option value="">Semua Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Disetujui</option>
+                    <option value="rejected">Ditolak</option>
+                </select>
+            </div>
+
+            <div class="validation-list" id="validationList">
+                <!-- Pending items akan ditampilkan di sini -->
+            </div>
+        </section>
+
         <!-- Items Management Section -->
-        <section id="items-section" class="section-container active">
+        <section id="items-section" class="section-container">
             <div class="section-header">
                 <h2>Kelola Items Barang Lelang</h2>
                 <div class="filter-actions">
@@ -106,6 +132,15 @@
         <section id="users-section" class="section-container">
             <div class="section-header">
                 <h2>Manajemen Users</h2>
+                <div class="filter-actions">
+                    <input type="text" id="userSearchInput" class="search-box" placeholder="Cari user...">
+                    <select id="userStatusFilter" class="filter-select">
+                        <option value="">Semua Status</option>
+                        <option value="active">Aktif</option>
+                        <option value="frozen">Dibekukan</option>
+                        <option value="banned">Banned</option>
+                    </select>
+                </div>
             </div>
 
             <div class="users-list" id="usersList">
@@ -153,6 +188,78 @@
             <div class="modal-actions">
                 <button class="btn btn-danger" onclick="confirmDelete()">Hapus Sekarang</button>
                 <button class="btn btn-secondary" onclick="closeDeleteModal()">Batalkan</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal untuk Item Validation -->
+    <div id="validationModal" class="modal">
+        <div class="modal-content validation-modal">
+            <span class="close" onclick="closeValidationModal()">&times;</span>
+            <h2>📋 Validasi Barang</h2>
+            
+            <div class="validation-item-details" id="validationItemDetails">
+                <!-- Item details akan tampil di sini -->
+            </div>
+
+            <div class="validation-image-preview" id="validationImagePreview">
+                <!-- Images akan ditampilkan di sini -->
+            </div>
+
+            <div class="validation-form">
+                <label>Catatan Admin (optional):</label>
+                <textarea id="validationNotes" class="form-textarea" placeholder="Tulis catatan atau alasan penolakan..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-success" onclick="approveItem()">✅ Terima Barang</button>
+                <button class="btn btn-danger" onclick="rejectItem()">❌ Tolak Barang</button>
+                <button class="btn btn-secondary" onclick="closeValidationModal()">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal untuk User Punishment -->
+    <div id="punishmentModal" class="modal">
+        <div class="modal-content punishment-modal">
+            <span class="close" onclick="closePunishmentModal()">&times;</span>
+            <h2>⚖️ Pemberian Hukuman User</h2>
+            
+            <div class="punishment-user-info" id="punishmentUserInfo">
+                <!-- User info akan tampil di sini -->
+            </div>
+
+            <div class="punishment-form">
+                <label>Tipe Hukuman:</label>
+                <select id="punishmentType" class="form-input">
+                    <option value="">-- Pilih Tipe --</option>
+                    <option value="freeze">Bekukan (2 Hari)</option>
+                    <option value="ban">Ban Permanen</option>
+                </select>
+
+                <label>Alasan:</label>
+                <textarea id="punishmentReason" class="form-textarea" placeholder="Jelaskan alasan pemberian hukuman..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-danger" onclick="applyPunishment()">⚖️ Terapkan Hukuman</button>
+                <button class="btn btn-secondary" onclick="closePunishmentModal()">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal untuk View Reports -->
+    <div id="reportsModal" class="modal">
+        <div class="modal-content reports-modal">
+            <span class="close" onclick="closeReportsModal()">&times;</span>
+            <h2>📢 Laporan User</h2>
+            
+            <div class="reports-list" id="reportsList">
+                <!-- Reports akan ditampilkan di sini -->
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeReportsModal()">Tutup</button>
             </div>
         </div>
     </div>

@@ -2038,6 +2038,52 @@ body.modal-open { overflow: hidden; }
     object-fit: cover;
 }
 
+/* Thumbnails for item detail */
+.detail-thumbs {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+.detail-thumb {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    border: 2px solid rgba(0,0,0,0.05);
+}
+.detail-thumb:hover {
+    transform: translateY(-4px);
+    transition: transform .15s ease;
+}
+
+/* Thumbnails for item detail */
+.detail-thumbs {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+}
+.detail-thumb {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    border: 2px solid rgba(0,0,0,0.05);
+}
+.detail-thumb:hover {
+    transform: translateY(-4px);
+    transition: transform .15s ease;
+}
+
+/* active thumbnail */
+.detail-thumb.active {
+    outline: 3px solid rgba(74, 90, 160, 0.9);
+    transform: translateY(-6px);
+}
+
 .item-detail-info {
     display: flex;
     flex-direction: column;
@@ -2180,11 +2226,37 @@ body.modal-open { overflow: hidden; }
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
     background: linear-gradient(180deg, rgba(245,245,245,1), rgba(255,255,255,1));
     display: flex;
+    flex-direction: column; /* thumbnails below main image */
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
+    gap: 12px;
     min-height: 260px;
+    padding: 18px;
 }
 
+/* Thumbnails stacked vertically with scroll when many images */
+.detail-thumbs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-height: 260px;
+    overflow-y: auto;
+    padding-right: 6px; /* room for scrollbar */
+}
+.detail-thumb {
+    width: 84px;
+    height: 84px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    border: 2px solid rgba(0,0,0,0.05);
+}
+.detail-thumb:hover {
+    transform: translateY(-4px);
+    transition: transform .15s ease;
+}
 .detail-main-image {
     /* Make image responsive and avoid leaving a large empty block when images are small */
     width: 100%;

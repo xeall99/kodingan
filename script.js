@@ -102,7 +102,26 @@ async function loadItemsFromServer() {
         auctionItems = data.map(it => ({
             id: it.id,
             name: it.name,
-            image: it.image || it.img || 'default-item.png',
+            // normalize images from server (supports images array or single image)
+            images: (function(){
+                let arr = [];
+                if (Array.isArray(it.images)) arr = it.images;
+                else if (it.image) {
+                    try { const p = JSON.parse(it.image); arr = Array.isArray(p) ? p : [it.image]; } catch (e) { arr = [it.image]; }
+                }
+                // normalize paths: convert backslashes to forward slashes and ensure leading slash for uploads
+                return arr.map(src => {
+                    if (!src) return src;
+                    let s = src.replace(/\\/g, '/');
+                    if (!/^https?:\/\//i.test(s) && !s.startsWith('/') && s.startsWith('uploads/')) s = '/' + s;
+                    return s;
+                });
+            })(),
+            image: (function(){
+                const imgs = (Array.isArray(it.images) ? it.images : (it.image ? (function(){ try { const p = JSON.parse(it.image); return Array.isArray(p) ? p : [it.image]; } catch(e) { return [it.image]; } })() : []));
+                const norm = imgs.map(src => { if (!src) return src; let s = src.replace(/\\/g, '/'); if (!/^https?:\/\//i.test(s) && !s.startsWith('/') && s.startsWith('uploads/')) s = '/' + s; return s; });
+                return norm.length ? norm[0] : 'default-item.png';
+            })(),
             description: it.description || '',
             currentBid: Number(it.price || it.currentBid || 0),
             initialPrice: Number(it.price || it.currentBid || 0),
@@ -594,7 +613,7 @@ function createAuctionCard(item, isWishlisted = false) {
     if (isAdmin) actionButtons += `<button class="btn btn-wishlist" style="background:#ff6b6b;color:#fff;" onclick="deleteItem(${item.id})"><i class="fas fa-trash"></i></button>`;
 
     card.innerHTML = `
-        <img src="${item.image}" alt="${item.name}" class="card-image">
+        <img src="${item.image}" alt="${item.name}" class="card-image" onerror="this.src='default-item.png'">
         <div class="card-body">
             <h3 class="card-title">${item.name}</h3>
             <p class="card-description">${item.description}</p>
@@ -807,16 +826,25 @@ function closeItemDetail() {
 }
 
 // New detailed item view with seller info and payment methods
-function openItemDetailModal(itemId) {
-    const item = getItemById(itemId);
+async function openItemDetailModal(itemId) {
+    let item = getItemById(itemId);
+    try {
+        const res = await fetch(`/api/items/${itemId}`);
+        if (res.ok) {
+            const body = await res.json();
+            if (body.item) item = body.item;
+        }
+    } catch (err) {
+        console.warn('Could not fetch full item details', err);
+    }
     
     const detailHTML = `
         <div class="item-detail-page">
             <!-- Image Section -->
             <div class="detail-image-section">
-                <img src="${item.image}" alt="${item.name}" class="detail-main-image">
-            </div>
-            
+                    <img id="detailMainImage" src="${item.image}" alt="${item.name}" class="detail-main-image" onerror="this.src='https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=600'">
+                    ${(item.images && item.images.length > 1) ? `<div class="detail-thumbs">${item.images.map((img, idx) => `<img src="${img}" class="detail-thumb" onclick="document.getElementById('detailMainImage').src=\'${img}\'" onerror="this.src='https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=600'" alt="thumb-${idx}">`).join('')}</div>` : ''}
+                </div>
             <!-- Info Section -->
             <div class="detail-info-section">
                 <!-- Item Name & Details -->
@@ -957,13 +985,61 @@ function openItemDetailModal(itemId) {
             }
         } catch (err) { console.error('load seller profile err', err); }
     })();
+
+    // --- image auto-rotate + thumbnail interactions ---
+    try {
+        const mainImg = document.getElementById('detailMainImage');
+        const thumbs = Array.from(document.querySelectorAll('.detail-thumb'));
+        let rotateIndex = 0;
+        function pauseRotation() {
+            const modalEl = document.getElementById('itemDetailModal');
+            if (modalEl && modalEl._rotateTimer) { clearInterval(modalEl._rotateTimer); modalEl._rotateTimer = null; }
+        }
+        function resumeRotation() {
+            const modalEl = document.getElementById('itemDetailModal');
+            if (!modalEl) return;
+            if (modalEl._rotateTimer) return;
+            if (!Array.isArray(item.images) || item.images.length <= 1) return;
+            modalEl._rotateTimer = setInterval(() => {
+                rotateIndex = (rotateIndex + 1) % item.images.length;
+                if (mainImg) mainImg.src = item.images[rotateIndex];
+                thumbs.forEach((t, idx) => t.classList.toggle('active', idx === rotateIndex));
+            }, 3000);
+        }
+        if (mainImg && Array.isArray(item.images) && item.images.length > 1) {
+            // initialize
+            mainImg.src = item.images[0];
+            thumbs.forEach((t, idx) => {
+                t.classList.toggle('active', idx === 0);
+                t.addEventListener('click', () => {
+                    rotateIndex = idx;
+                    mainImg.src = item.images[rotateIndex];
+                    thumbs.forEach((th, idd) => th.classList.toggle('active', idd === rotateIndex));
+                });
+                t.addEventListener('mouseenter', pauseRotation);
+                t.addEventListener('mouseleave', resumeRotation);
+            });
+            mainImg.addEventListener('mouseenter', pauseRotation);
+            mainImg.addEventListener('mouseleave', resumeRotation);
+            // start rotation
+            const modalEl = document.getElementById('itemDetailModal');
+            if (modalEl) modalEl._rotateTimer = setInterval(() => {
+                rotateIndex = (rotateIndex + 1) % item.images.length;
+                mainImg.src = item.images[rotateIndex];
+                thumbs.forEach((t, idx) => t.classList.toggle('active', idx === rotateIndex));
+            }, 3000);
+        }
+    } catch (e) { console.warn('image rotate setup failed', e); }
 }
+
 
 function closeDetailModal() {
     const modal = document.getElementById('itemDetailModal');
     modal.classList.remove('active');
     // remove modal-open guard and allow background to scroll again
     document.body.classList.remove('modal-open');
+    // clear any running image rotation timer
+    try { if (modal && modal._rotateTimer) { clearInterval(modal._rotateTimer); modal._rotateTimer = null; } } catch(e) {}
     // clear content after close animation to avoid stale DOM
     setTimeout(() => {
         if (!modal.classList.contains('active')) modal.innerHTML = '';
@@ -1008,8 +1084,15 @@ function selectPaymentMethod(method, sellerId, phone) {
 
 
 // Open edit modal prefilled with item's data
-function openEditItemModal(itemId) {
-    const item = getItemById(itemId);
+async function openEditItemModal(itemId) {
+    let item = getItemById(itemId);
+    try {
+        const res = await fetch(`/api/items/${itemId}`);
+        if (res.ok) {
+            const body = await res.json();
+            if (body.item) item = body.item;
+        }
+    } catch (err) { console.warn('Could not fetch item for edit', err); }
     if (!item) return alert('Item tidak ditemukan');
     const modal = document.getElementById('itemDetailModal');
     const editHTML = `
@@ -1025,7 +1108,7 @@ function openEditItemModal(itemId) {
                 <div class="form-group"><label>Keterangan Lainnya</label><textarea name="other" class="form-textarea">${item.other || ''}</textarea></div>
                 <div class="form-group"><label>Harga Awal</label><input name="price" type="number" class="form-input" value="${item.price}"></div>
                 <div class="form-group"><label>Selesai Pada (ISO)</label><input name="endTime" class="form-input" value="${item.endTime}"></div>
-                <div class="form-group"><label>Gambar</label><input name="image" type="file" class="form-input"></div>
+                <div class="form-group"><label>Gambar</label><input name="images" type="file" class="form-input" multiple></div>
                 <div style="text-align:right; margin-top:8px;">
                     <button class="btn btn-secondary" type="button" onclick="closeDetailModal()">Batal</button>
                     <button class="btn btn-primary" type="submit">Simpan Perubahan</button>
@@ -1074,21 +1157,41 @@ async function openSelectWinnerModal(itemId) {
         list.innerHTML = entries.map(e => {
             const b = e.bid; const u = e.user;
             const displayName = u && u.name ? `${u.name} (${u.email || u.id})` : `User ${b.userId}`;
-            return `<div class="bid-card"><div class="bid-details"><strong>${displayName}</strong> - Rp ${formatPrice(b.amount)}</div><div style="text-align:right;"><button class="btn btn-primary" onclick="selectWinner(${itemId}, ${b.userId}, ${b.id})">Pilih</button></div></div>`;
+            return `<div class="bid-card"><div class="bid-details"><strong>${displayName}</strong> - Rp ${formatPrice(b.amount)}</div><div style="text-align:right;"><button type="button" class="btn btn-primary" onclick="selectWinner(${itemId}, ${b.userId}, ${b.id})">Pilih</button></div></div>`;
         }).join('');
     } catch (err) { console.error(err); document.getElementById('winnerList').innerHTML = '<p>Gagal memuat bids</p>'; }
 }
 
 async function selectWinner(itemId, winnerId, bidId) {
     if (!confirm('Pilih user ini sebagai pemenang?')) return;
+    // determine sellerId: prefer logged-in user, fallback to item data
+    const sellerFromUser = currentUser && currentUser.id ? currentUser.id : null;
+    const item = getItemById(itemId) || null;
+    const sellerFromItem = item && item.sellerId ? item.sellerId : null;
+    const sellerId = sellerFromUser || sellerFromItem;
+    if (!sellerId) return alert('Anda harus login sebagai penjual untuk memilih pemenang.');
+
     try {
-        const res = await fetch(`/api/items/${itemId}/select-winner`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ sellerId: currentUser && currentUser.id ? currentUser.id : '', winnerId, bidId }) });
-        const body = await res.json();
-        if (!res.ok) return alert(body.error || 'Gagal memilih pemenang');
-        alert('Pemenang berhasil dipilih');
+        const res = await fetch(`/api/items/${itemId}/select-winner`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ sellerId, winnerId, bidId })
+        });
+        let body = {};
+        try { body = await res.json(); } catch(e) { /* ignore parse error */ }
+        if (!res.ok) {
+            console.error('selectWinner failed', res.status, body);
+            return alert(body.error || `Gagal memilih pemenang (status ${res.status})`);
+        }
+        // show totals if provided
+        if (body && (body.totalDue || body.fee)) {
+            alert(`Pemenang dipilih. Total yang harus dibayar: Rp ${Number(body.totalDue || 0).toLocaleString()} (biaya admin: Rp ${Number(body.fee || 0).toLocaleString()}).`);
+        } else {
+            alert('Pemenang berhasil dipilih');
+        }
         closeDetailModal();
-        loadItemsFromServer();
-    } catch (err) { console.error(err); alert('Gagal terhubung ke server'); }
+        await loadItemsFromServer();
+    } catch (err) { console.error('selectWinner error', err); alert('Gagal terhubung ke server'); }
 }
 
 

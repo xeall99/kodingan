@@ -13,14 +13,60 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const PORT = process.env.PORT || 3000;
+// Platform fee percentage (admin fee on top of winning bid). Default 5%
+const PLATFORM_FEE_PERCENT = parseFloat(process.env.PLATFORM_FEE_PERCENT || '5');
 const UPLOADS_DIR = path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
 
+// Ensure platform_revenue table exists and users.totalPurchases column exists (safe on startup)
+(async function ensurePlatformRevenueAndUserTotals() {
+  try {
+    // users.totalPurchases
+    const [uCols] = await pool.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND COLUMN_NAME = 'totalPurchases'");
+    if (!uCols.length) {
+      await pool.query("ALTER TABLE users ADD COLUMN totalPurchases DECIMAL(15,2) DEFAULT 0.00");
+      console.log('Migration: added users.totalPurchases');
+    }
+
+    // platform_revenue table
+    const [tables] = await pool.query("SHOW TABLES LIKE 'platform_revenue'");
+    if (!tables.length) {
+      await pool.query(`CREATE TABLE platform_revenue (
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        itemId INT DEFAULT NULL,
+        paymentId INT DEFAULT NULL,
+        amount DECIMAL(15,2) DEFAULT NULL,
+        fee DECIMAL(15,2) DEFAULT NULL,
+        time DATETIME DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
+      console.log('Migration: created platform_revenue table');
+    }
+  } catch (err) {
+    console.warn('Could not ensure platform_revenue or totalPurchases (non-fatal):', err.message);
+  }
+})();
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOADS_DIR),
   filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
 });
 const upload = multer({ storage });
+// Multer error handler (returns 400 for upload errors)
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    console.warn('Multer error:', err.message);
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
+});
+
+// Multer error handler (convert Multer errors into 400 responses)
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    console.warn('Multer error:', err.message);
+    return res.status(400).json({ error: err.message });
+  }
+  next(err);
+});
 
 const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -60,6 +106,67 @@ async function getCategoriesForItem(conn, itemId) {
   }
 })();
 
+// Ensure items.createdAt exists (safe on startup)
+(async function ensureItemsCreatedAt() {
+  try {
+    const [cols] = await pool.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND COLUMN_NAME = 'createdAt'");
+    if (!cols.length) {
+      await pool.query("ALTER TABLE items ADD COLUMN createdAt DATETIME DEFAULT CURRENT_TIMESTAMP AFTER id");
+      console.log('Migration: added items.createdAt');
+    }
+  } catch (err) {
+    console.warn('Could not ensure items.createdAt (non-fatal):', err.message);
+  }
+})();
+
+// Ensure itemCondition column exists (rename `condition` -> `itemCondition` if necessary)
+(async function ensureItemConditionColumn() {
+  try {
+    const [cols] = await pool.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND COLUMN_NAME IN ('condition','itemCondition')");
+    const existing = cols.map(c => c.COLUMN_NAME);
+    if (existing.includes('condition') && !existing.includes('itemCondition')) {
+      await pool.query("ALTER TABLE items CHANGE `condition` `itemCondition` VARCHAR(255) DEFAULT NULL");
+      console.log('Migration: renamed items.condition -> itemCondition');
+    } else if (!existing.includes('itemCondition')) {
+      await pool.query("ALTER TABLE items ADD COLUMN itemCondition VARCHAR(255) DEFAULT NULL");
+      console.log('Migration: added items.itemCondition');
+    }
+  } catch (err) {
+    console.warn('Could not ensure itemCondition column (non-fatal):', err.message);
+  }
+})();
+
+// Ensure admin-related columns exist on items (adminNotes, rejectionReason)
+(async function ensureItemAdminColumns() {
+  try {
+    const [cols] = await pool.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND COLUMN_NAME IN ('adminNotes','rejectionReason')");
+    const existing = cols.map(c => c.COLUMN_NAME);
+    if (!existing.includes('adminNotes')) {
+      await pool.query("ALTER TABLE items ADD COLUMN adminNotes TEXT DEFAULT NULL");
+      console.log('Migration: added items.adminNotes');
+    }
+    if (!existing.includes('rejectionReason')) {
+      await pool.query("ALTER TABLE items ADD COLUMN rejectionReason TEXT DEFAULT NULL");
+      console.log('Migration: added items.rejectionReason');
+    }
+  } catch (err) {
+    console.warn('Could not ensure items admin columns (non-fatal):', err.message);
+  }
+})();
+
+// Ensure items.createdAt exists (safe on startup)
+(async function ensureItemsCreatedAt() {
+  try {
+    const [cols] = await pool.query("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'items' AND COLUMN_NAME = 'createdAt'");
+    if (!cols.length) {
+      await pool.query("ALTER TABLE items ADD COLUMN createdAt DATETIME DEFAULT CURRENT_TIMESTAMP AFTER id");
+      console.log('Migration: added items.createdAt');
+    }
+  } catch (err) {
+    console.warn('Could not ensure items.createdAt (non-fatal):', err.message);
+  }
+})();
+
 app.post('/api/register', async (req, res) => {
   const { name, email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email & password diperlukan' });
@@ -80,12 +187,20 @@ app.post('/api/login', async (req, res) => {
   if (!email || !password) return res.status(400).json({ error: 'Email & password diperlukan' });
   try {
     const conn = await pool.getConnection();
-    const [rows] = await conn.query('SELECT id, name, email, password, phone, address, instagram, twitter, photo FROM users WHERE email = ?', [email]);
+    const [rows] = await conn.query('SELECT id, name, email, password, phone, address, instagram, twitter, photo, status, frozenUntil FROM users WHERE email = ?', [email]);
     conn.release();
     if (!rows.length) return res.status(401).json({ error: 'Email atau password salah' });
     const user = rows[0];
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(401).json({ error: 'Email atau password salah' });
+    // Reject login if banned
+    if (user.status === 'banned') return res.status(403).json({ error: 'Akun Anda dibanned' });
+    // auto-unfreeze if frozenUntil has passed
+    if (user.status === 'frozen' && user.frozenUntil && new Date(user.frozenUntil) <= new Date()) {
+      await pool.query("UPDATE users SET status='active', frozenUntil = NULL, punishmentReason = NULL WHERE id = ?", [user.id]);
+      user.status = 'active';
+      user.frozenUntil = null;
+    }
     delete user.password;
     res.json({ user });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
@@ -118,7 +233,7 @@ app.post('/api/reset-password', async (req, res) => {
 
 app.get('/api/users/:id', async (req, res) => {
   try {
-    const [rows] = await pool.query('SELECT id, name, email, phone, address, instagram, twitter, photo FROM users WHERE id = ?', [req.params.id]);
+    const [rows] = await pool.query('SELECT id, name, email, phone, address, instagram, twitter, photo, status, frozenUntil, punishmentReason FROM users WHERE id = ?', [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'User tidak ditemukan' });
     res.json({ user: rows[0] });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -147,6 +262,27 @@ app.get('/api/items', async (req, res) => {
       WHERE i.status IN ('active','pending_payment') ORDER BY i.id DESC`);
     for (const it of items) {
       it.categories = await getCategoriesForItem(pool, it.id);
+      // normalize condition field to keep frontend compatibility
+      it.condition = it.itemCondition || it.condition || null;
+      // normalize images: support JSON array or single path, and normalize paths
+      let imgs = [];
+      if (it.image) {
+        try {
+          const parsed = JSON.parse(it.image);
+          if (Array.isArray(parsed)) imgs = parsed;
+          else imgs = [it.image];
+        } catch (e) {
+          imgs = [it.image];
+        }
+      }
+      imgs = imgs.map(s => {
+        if (!s) return s;
+        let x = s.replace(/\\/g, '/');
+        if (!/^https?:\/\//i.test(x) && !x.startsWith('/') && x.startsWith('uploads/')) x = '/' + x;
+        return x;
+      });
+      it.images = imgs;
+      it.image = imgs.length ? imgs[0] : (it.image || null);
     }
     res.json(items);
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
@@ -161,25 +297,67 @@ app.get('/api/items/:id', async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: 'Item tidak ditemukan' });
     const item = rows[0];
     item.categories = await getCategoriesForItem(pool, item.id);
+    item.condition = item.itemCondition || item.condition || null;
+    // normalize images and paths
+    let imgs = [];
+    if (item.image) {
+      try {
+        const parsed = JSON.parse(item.image);
+        if (Array.isArray(parsed)) imgs = parsed;
+        else imgs = [item.image];
+      } catch (e) { imgs = [item.image]; }
+    }
+    imgs = imgs.map(s => {
+      if (!s) return s;
+      let x = s.replace(/\\/g, '/');
+      if (!/^https?:\/\//i.test(x) && !x.startsWith('/') && x.startsWith('uploads/')) x = '/' + x;
+      return x;
+    });
+    item.images = imgs;
+    item.image = imgs.length ? imgs[0] : (item.image || null);
     res.json({ item });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/items', upload.single('image'), async (req, res) => {
+app.post('/api/items', upload.any(), async (req, res) => {
   try {
     const { name, description, detail, spec, condition, yearBought, other, price, endTime, sellerId, categories } = req.body;
     if (!name || !price || !endTime || !sellerId) return res.status(400).json({ error: 'Nama, harga, endTime dan sellerId diperlukan' });
-    const image = req.file ? `/uploads/${req.file.filename}` : null;
+    // Pastikan seller tidak dibekukan atau dibanned
+    try { await ensureUserAllowed(sellerId); } catch (e) { return res.status(e.code || 403).json({ error: e.message || 'User diblokir' }); }
+
+    // Basic validation for price and endTime
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice)) return res.status(400).json({ error: 'Harga tidak valid' });
+    const parsedEnd = new Date(endTime);
+    if (isNaN(parsedEnd.getTime())) return res.status(400).json({ error: 'endTime tidak valid' });
+
+    // tolerant upload: support multiple field names and multiple files
+    const uploadFiles = (req.files || []).filter(f => ['image','images','photo','file'].includes(f.fieldname));
+    const imagesArr = uploadFiles.map(f => `/uploads/${f.filename}`);
+    // If client sent 'images' as JSON string (fallback), try to parse
+    if (!imagesArr.length && req.body.images) {
+      try {
+        const parsed = JSON.parse(req.body.images);
+        if (Array.isArray(parsed)) imagesArr.push(...parsed);
+      } catch (e) {
+        // ignore
+      }
+    }
+    const imageValue = imagesArr.length ? JSON.stringify(imagesArr) : null;
     const conn = await pool.getConnection();
     
     // Insert item dengan status 'pending' untuk validasi admin
     const [r] = await conn.query(
-      'INSERT INTO items (name, image, description, detail, spec, condition, yearBought, other, price, endTime, sellerId, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "pending")',
-      [name, image, description || '', detail || '', spec || '', condition || '', yearBought || '', other || '', price, endTime, sellerId]
+      'INSERT INTO items (`name`,`image`,`description`,`detail`,`spec`,`itemCondition`,`yearBought`,`other`,`price`,`endTime`,`sellerId`,`status`) VALUES (?,?,?,?,?,?,?,?,?,?,?,"pending")',
+      [name, imageValue, description || '', detail || '', spec || '', condition || '', yearBought || '', other || '', parsedPrice, endTime, sellerId]
     );
     const itemId = r.insertId;
     
-    const catList = categories ? JSON.parse(categories) : [];
+    let catList = [];
+    if (categories) {
+      try { catList = JSON.parse(categories); } catch (e) { conn.release(); return res.status(400).json({ error: 'categories harus berupa JSON array' }); }
+    }
     for (const catName of catList) {
       const [cRow] = await conn.query('SELECT id FROM categories WHERE name = ?', [catName]);
       let catId;
@@ -206,7 +384,7 @@ app.delete('/api/items/:id', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
-app.put('/api/items/:id', upload.single('image'), async (req, res) => {
+app.put('/api/items/:id', upload.any(), async (req, res) => {
   try {
     const id = req.params.id;
     const conn = await pool.getConnection();
@@ -217,13 +395,28 @@ app.put('/api/items/:id', upload.single('image'), async (req, res) => {
     if (!sellerId || parseInt(sellerId) !== item.sellerId) { conn.release(); return res.status(403).json({ error: 'Hanya penjual dapat mengedit item ini' }); }
 
     const { name, description, price, endTime, categories } = req.body;
-    const image = req.file ? `/uploads/${req.file.filename}` : item.image;
 
-    await conn.query('UPDATE items SET name=?, image=?, description=?, price=?, endTime=? WHERE id = ?', [name || item.name, image, description || item.description, price || item.price, endTime || item.endTime, id]);
+    // Basic validation
+    const parsedPrice = parseFloat(price || item.price);
+    if (isNaN(parsedPrice)) { conn.release(); return res.status(400).json({ error: 'Harga tidak valid' }); }
+    const parsedEnd = new Date(endTime || item.endTime);
+    if (isNaN(parsedEnd.getTime())) { conn.release(); return res.status(400).json({ error: 'endTime tidak valid' }); }
+
+    const uploadFiles = (req.files || []).filter(f => ['image','images','photo','file'].includes(f.fieldname));
+    const imagesArr = uploadFiles.map(f => `/uploads/${f.filename}`);
+    let imageVal = item.image;
+    if (imagesArr.length) imageVal = JSON.stringify(imagesArr);
+    // if incoming body sent 'images' JSON string, accept it
+    if (!imagesArr.length && req.body.images) {
+      try { const parsed = JSON.parse(req.body.images); if (Array.isArray(parsed)) imageVal = JSON.stringify(parsed); } catch (e) { /* ignore */ }
+    }
+
+    await conn.query('UPDATE items SET name=?, image=?, description=?, price=?, endTime=?, itemCondition=? WHERE id = ?', [name || item.name, imageVal, description || item.description, parsedPrice || item.price, endTime || item.endTime, (req.body.condition || item.itemCondition || item.condition || null), id]);
 
     if (categories) {
       await conn.query('DELETE FROM item_categories WHERE itemId = ?', [id]);
-      const catList = JSON.parse(categories || '[]');
+      let catList = [];
+      try { catList = JSON.parse(categories || '[]'); } catch (e) { conn.release(); return res.status(400).json({ error: 'categories harus berupa JSON array' }); }
       for (const catName of catList) {
         const [cRow] = await conn.query('SELECT id FROM categories WHERE name = ?', [catName]);
         let catId;
@@ -246,6 +439,7 @@ app.post('/api/items/:id/select-winner', async (req, res) => {
     const id = req.params.id;
     const { sellerId, winnerId, bidId } = req.body;
     if (!sellerId) return res.status(400).json({ error: 'sellerId diperlukan' });
+    try { await ensureUserAllowed(sellerId); } catch (e) { return res.status(e.code || 403).json({ error: e.message || 'Seller diblokir' }); }
     const conn = await pool.getConnection();
     const [rows] = await conn.query('SELECT * FROM items WHERE id = ?', [id]);
     if (!rows.length) { conn.release(); return res.status(404).json({ error: 'Item tidak ditemukan' }); }
@@ -264,12 +458,26 @@ app.post('/api/items/:id/select-winner', async (req, res) => {
     await conn.query("UPDATE items SET status='pending_payment', winnerId=?, paymentDeadline=? WHERE id=?", [resolvedWinner, paymentDeadline, id]);
     const [itRows] = await conn.query('SELECT * FROM items WHERE id = ?', [id]);
     const it = itRows[0];
+
+    // compute winning amount & fees (best-effort)
+    let winningAmount = null;
+    if (bidId) {
+      const [brows] = await conn.query('SELECT amount FROM bids WHERE id = ?', [bidId]);
+      if (brows.length) winningAmount = parseFloat(brows[0].amount || 0);
+    }
+    if (!winningAmount) {
+      const [hbrows] = await conn.query('SELECT MAX(amount) as maxBid FROM bids WHERE itemId = ?', [id]);
+      if (hbrows && hbrows.length) winningAmount = parseFloat(hbrows[0].maxBid || 0);
+    }
+    if (!winningAmount) winningAmount = parseFloat(it.price || 0);
+    const fee = parseFloat((winningAmount * (PLATFORM_FEE_PERCENT/100)).toFixed(2));
+    const totalDue = parseFloat((winningAmount + fee).toFixed(2));
     const msg = `Selamat! Anda dipilih sebagai pemenang untuk item \"${it.name || 'barang'}\". Mohon selesaikan pembayaran dalam 24 jam.`;
-    await conn.query('INSERT INTO notifications (userId, itemId, type, message) VALUES (?,?,?,?)', [resolvedWinner, id, 'won_manual', msg]);
+    await conn.query('INSERT INTO notifications (userId, itemId, type, message) VALUES (?,?,?,?)', [resolvedWinner, id, 'won_manual', `Selamat! Anda dipilih sebagai pemenang untuk item "${it.name || 'barang'}". Total pembayaran: Rp ${totalDue.toLocaleString()} (termasuk biaya admin Rp ${fee.toLocaleString()}). Selesaikan pembayaran dalam 24 jam.`]);
     const sellerMsg = `Anda telah memilih userId ${resolvedWinner} sebagai pemenang untuk item \"${it.name || 'barang'}\"`;
     await conn.query('INSERT INTO notifications (userId, itemId, type, message) VALUES (?,?,?,?)', [it.sellerId, id, 'winner_selected', sellerMsg]);
     conn.release();
-    res.json({ message: 'Pemenang dipilih', winnerId: resolvedWinner });
+    res.json({ message: 'Pemenang dipilih', winnerId: resolvedWinner, totalDue, fee });
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
@@ -278,6 +486,7 @@ app.post('/api/bids', async (req, res) => {
   try {
     const { userId, itemId, amount } = req.body;
     if (!userId || !itemId || !amount) return res.status(400).json({ error: 'userId, itemId, amount diperlukan' });
+    try { await ensureUserAllowed(userId); } catch (e) { return res.status(e.code || 403).json({ error: e.message || 'User diblokir' }); }
     const [items] = await pool.query('SELECT * FROM items WHERE id = ?', [itemId]);
     if (!items.length) return res.status(404).json({ error: 'Item tidak ditemukan' });
     const item = items[0];
@@ -355,22 +564,44 @@ app.get('/api/wishlist/:userId', async (req, res) => {
   } catch (err) { console.error(err); res.status(500).json({ error: err.message }); }
 });
 
-  app.post('/api/payments', upload.single('proof'), async (req, res) => {
+  app.post('/api/payments', upload.any(), async (req, res) => {
     try {
       const { itemId, userId, amount, method } = req.body;
       if (!itemId || !userId) return res.status(400).json({ error: 'itemId & userId diperlukan' });
-      const proofPath = req.file ? `/uploads/${req.file.filename}` : null;
+      try { await ensureUserAllowed(userId); } catch (e) { return res.status(e.code || 403).json({ error: e.message || 'User diblokir' }); }
+      const proofFile = (req.files || []).find(f => ['proof','image','file'].includes(f.fieldname));
+      const proofPath = proofFile ? `/uploads/${proofFile.filename}` : null;
       const conn = await pool.getConnection();
 
-      await conn.query('INSERT INTO payments (itemId,userId,amount,method,proof,time) VALUES (?,?,?,?,?,NOW())',
-        [itemId, userId, amount || 0, method || 'unknown', proofPath]);
-  
+      // compute fee and total
+      const baseAmount = parseFloat(amount || 0);
+      const fee = parseFloat((baseAmount * (PLATFORM_FEE_PERCENT/100)).toFixed(2));
+      const finalAmount = parseFloat((baseAmount + fee).toFixed(2));
+
+      const [r] = await conn.query('INSERT INTO payments (itemId,userId,amount,method,proof,time) VALUES (?,?,?,?,?,NOW())',
+        [itemId, userId, finalAmount, method || 'unknown', proofPath]);
+      const paymentId = r.insertId;
+
+      // Record platform revenue entry
+      try {
+        await conn.query('INSERT INTO platform_revenue (itemId,paymentId,amount,fee) VALUES (?,?,?,?)', [itemId, paymentId, finalAmount, fee]);
+      } catch (e) {
+        console.warn('Failed to record platform_revenue:', e.message);
+      }
+
+      // Update buyer total purchases
+      try {
+        await conn.query('UPDATE users SET totalPurchases = COALESCE(totalPurchases,0) + ? WHERE id = ?', [finalAmount, userId]);
+      } catch (e) {
+        console.warn('Failed to update user totalPurchases:', e.message);
+      }
+
       await conn.query("UPDATE items SET status='sold', winnerId=? WHERE id=?", [userId, itemId]);
       
       const [itRows] = await conn.query('SELECT * FROM items WHERE id = ?', [itemId]);
       if (itRows.length) {
         const it = itRows[0];
-        const buyerMsg = `Pembayaran diterima untuk item \"${it.name || 'barang'}\". Terima kasih.`;
+        const buyerMsg = `Pembayaran diterima untuk item \"${it.name || 'barang'}\". Total yang dibayarkan: Rp ${finalAmount.toLocaleString()} (termasuk biaya admin Rp ${fee.toLocaleString()}). Terima kasih.`;
         const sellerMsg = `Item Anda \"${it.name || 'barang'}\" telah terjual kepada userId ${userId}.`;
         await conn.query('INSERT INTO notifications (userId, itemId, type, message) VALUES (?,?,?,?)', [userId, itemId, 'payment_received', buyerMsg]);
         await conn.query('INSERT INTO notifications (userId, itemId, type, message) VALUES (?,?,?,?)', [it.sellerId, itemId, 'sold', sellerMsg]);
@@ -396,7 +627,11 @@ setInterval(async () => {
           await pool.query("UPDATE items SET status='pending_payment', winnerId=?, paymentDeadline=? WHERE id=?", [hb[0].userId, new Date(now.getTime() + 24*60*60*1000), it.id]);
           const [itRows] = await pool.query('SELECT * FROM items WHERE id = ?', [it.id]);
           const item = itRows[0];
-          const winnerMsg = `Selamat! Anda terpilih sebagai pemenang otomatis untuk item \"${item.name || 'barang'}\". Mohon selesaikan pembayaran dalam 24 jam.`;
+          // compute fee & total based on max bid
+          const winningAmount = parseFloat(hb[0].maxBid || 0);
+          const fee = parseFloat((winningAmount * (PLATFORM_FEE_PERCENT/100)).toFixed(2));
+          const totalDue = parseFloat((winningAmount + fee).toFixed(2));
+          const winnerMsg = `Selamat! Anda terpilih sebagai pemenang otomatis untuk item \"${item.name || 'barang'}\". Total pembayaran: Rp ${totalDue.toLocaleString()} (termasuk biaya admin Rp ${fee.toLocaleString()}). Mohon selesaikan pembayaran dalam 24 jam.`;
           const sellerMsg = `Item Anda \"${item.name || 'barang'}\" telah berakhir dan pemenang dipilih (userId ${hb[0].userId}).`;
           await pool.query('INSERT INTO notifications (userId, itemId, type, message) VALUES (?,?,?,?)', [hb[0].userId, it.id, 'won_auto', winnerMsg]);
           await pool.query('INSERT INTO notifications (userId, itemId, type, message) VALUES (?,?,?,?)', [item.sellerId, it.id, 'winner_selected', sellerMsg]);
@@ -415,6 +650,24 @@ function isAdmin(req) {
     // Cek dari header atau session
     return req.headers['x-admin-id'] === ADMIN_ID || 
            req.query.adminId === ADMIN_ID;
+}
+
+// Helper: ensure user is allowed to perform actions (not banned / not currently frozen)
+async function ensureUserAllowed(userId) {
+  if (!userId) throw { code: 400, message: 'userId diperlukan' };
+  const [rows] = await pool.query('SELECT id, status, frozenUntil FROM users WHERE id = ?', [userId]);
+  if (!rows.length) throw { code: 404, message: 'User tidak ditemukan' };
+  const u = rows[0];
+  // auto-unfreeze if frozenUntil passed
+  if (u.status === 'frozen' && u.frozenUntil) {
+    const until = new Date(u.frozenUntil);
+    if (until <= new Date()) {
+      await pool.query("UPDATE users SET status='active', frozenUntil = NULL, punishmentReason = NULL WHERE id = ?", [userId]);
+      return; // now allowed
+    }
+    throw { code: 403, message: `User dibekukan sampai ${u.frozenUntil}` };
+  }
+  if (u.status === 'banned') throw { code: 403, message: 'User dibanned' };
 }
 
 // ADMIN: ITEMS MANAGEMENT
@@ -490,9 +743,9 @@ app.get('/api/admin/users', async (req, res) => {
     
     try {
         const conn = await pool.getConnection();
-        const [users] = await conn.query(
-            'SELECT id, name, email, phone, address, photo, createdAt FROM users ORDER BY id DESC'
-        );
+    const [users] = await conn.query(
+      'SELECT id, name, email, phone, address, photo, createdAt, status, frozenUntil, punishmentReason FROM users ORDER BY id DESC'
+    );
         conn.release();
         
         res.json({ users });
@@ -698,16 +951,71 @@ app.get('/api/admin/items/pending', async (req, res) => {
     
     try {
         const conn = await pool.getConnection();
+        // join seller info so admin can see seller name
         const [items] = await conn.query(`
-            SELECT * FROM items 
-            WHERE status = 'pending'
-            ORDER BY createdAt DESC
+            SELECT i.*, u.name AS seller FROM items i
+            LEFT JOIN users u ON i.sellerId = u.id
+            WHERE i.status = 'pending'
+            ORDER BY i.createdAt DESC
         `);
+
+        // normalize each item: categories, images array, condition, uploadDate
+        for (const it of items) {
+            it.categories = await getCategoriesForItem(conn, it.id);
+            it.condition = it.itemCondition || it.condition || null;
+            // parse images (support JSON array or single url)
+            let imgs = [];
+            if (it.image) {
+                try {
+                    const parsed = JSON.parse(it.image);
+                    if (Array.isArray(parsed)) imgs = parsed;
+                    else imgs = [it.image];
+                } catch (e) { imgs = [it.image]; }
+            }
+            it.images = imgs;
+            it.image = imgs.length ? imgs[0] : (it.image || null);
+            it.uploadDate = it.createdAt || null;
+        }
+
         conn.release();
         
         res.json({ items });
     } catch (err) {
         console.error('GET pending items error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Get sold items for admin view
+app.get('/api/admin/items/sold', async (req, res) => {
+    if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
+
+    try {
+        const conn = await pool.getConnection();
+        const [items] = await conn.query(`
+            SELECT i.*, s.name AS seller, b.name AS buyer FROM items i
+            LEFT JOIN users s ON i.sellerId = s.id
+            LEFT JOIN users b ON i.winnerId = b.id
+            WHERE i.status = 'sold'
+            ORDER BY i.createdAt DESC
+        `);
+
+        for (const it of items) {
+            it.categories = await getCategoriesForItem(conn, it.id);
+            it.condition = it.itemCondition || it.condition || null;
+            let imgs = [];
+            if (it.image) {
+                try { const parsed = JSON.parse(it.image); if (Array.isArray(parsed)) imgs = parsed; else imgs = [it.image]; } catch (e) { imgs = [it.image]; }
+            }
+            it.images = imgs;
+            it.image = imgs.length ? imgs[0] : (it.image || null);
+            it.uploadDate = it.createdAt || null;
+        }
+
+        conn.release();
+        res.json({ items });
+    } catch (err) {
+        console.error('GET sold items error:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -729,11 +1037,20 @@ app.post('/api/admin/items/:id/approve', async (req, res) => {
         `, [notes || '', id]);
         
         // Get item for notification
-        const [item] = await conn.query('SELECT * FROM items WHERE id = ?', [id]);
+        const [itemRows] = await conn.query('SELECT * FROM items WHERE id = ?', [id]);
+        const item = itemRows[0];
+
+        // insert notification to seller
+        try {
+            const msg = `Selamat! Item Anda "${item.name || 'barang'}" telah disetujui dan dipublikasikan.`;
+            await conn.query('INSERT INTO notifications (userId, itemId, type, message) VALUES (?,?,?,?)', [item.sellerId, id, 'item_approved', msg]);
+        } catch (e) {
+            console.warn('Failed to insert approval notification:', e.message);
+        }
         
         conn.release();
         
-        res.json({ message: 'Item approved', item: item[0] });
+        res.json({ message: 'Item approved', item });
     } catch (err) {
         console.error('Approve item error:', err);
         res.status(500).json({ error: err.message });
@@ -755,6 +1072,18 @@ app.post('/api/admin/items/:id/reject', async (req, res) => {
             SET status = 'rejected', rejectionReason = ?
             WHERE id = ?
         `, [reason || '', id]);
+
+        // Get item for notification
+        const [itemRows] = await conn.query('SELECT * FROM items WHERE id = ?', [id]);
+        const item = itemRows[0];
+
+        // notify seller about rejection with reason
+        try {
+            const msg = `Mohon maaf, item Anda "${item.name || 'barang'}" ditolak oleh admin. Alasan: ${reason || 'Tidak disebutkan'}`;
+            await conn.query('INSERT INTO notifications (userId, itemId, type, message) VALUES (?,?,?,?)', [item.sellerId, id, 'item_rejected', msg]);
+        } catch (e) {
+            console.warn('Failed to insert rejection notification:', e.message);
+        }
         
         conn.release();
         
@@ -812,6 +1141,22 @@ app.post('/api/admin/users/:id/punish', async (req, res) => {
         console.error('Punish user error:', err);
         res.status(500).json({ error: err.message });
     }
+});
+
+// Release user from punishment (unfreeze / unban)
+app.post('/api/admin/users/:id/release', async (req, res) => {
+  if (!isAdmin(req)) return res.status(403).json({ error: 'Unauthorized' });
+
+  try {
+    const id = req.params.id;
+    const conn = await pool.getConnection();
+    await conn.query("UPDATE users SET status='active', frozenUntil = NULL, punishmentReason = NULL WHERE id = ?", [id]);
+    conn.release();
+    res.json({ message: 'User released from punishment' });
+  } catch (err) {
+    console.error('Release user error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Get user reports

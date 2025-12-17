@@ -33,6 +33,10 @@
                 <span class="icon">📦</span>
                 <span>Kelola Items</span>
             </a>
+            <a href="#" class="nav-item" data-section="sold">
+                <span class="icon">🛒</span>
+                <span>Barang Terjual</span>
+            </a>
             <a href="#" class="nav-item" data-section="stats">
                 <span class="icon">📊</span>
                 <span>Statistik</span>
@@ -84,6 +88,27 @@
 
             <div class="items-list" id="itemsList">
                 <!-- Items akan ditampilkan di sini -->
+            </div>
+        </section>
+
+        <!-- Sold Items Section -->
+        <section id="sold-section" class="section-container">
+            <div class="section-header">
+                <h2>Barang Terjual</h2>
+                <p class="section-subtitle">Daftar barang yang telah terjual</p>
+            </div>
+
+            <div class="sold-filters">
+                <input type="text" id="soldSearchInput" class="search-box" placeholder="Cari barang atau seller...">
+                <select id="soldDateFilter" class="filter-select">
+                    <option value="">Semua Tanggal</option>
+                    <option value="7">7 Hari Terakhir</option>
+                    <option value="30">30 Hari Terakhir</option>
+                </select>
+            </div>
+
+            <div class="sold-list" id="soldList">
+                <!-- Sold items will be rendered here -->
             </div>
         </section>
 

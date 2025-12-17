@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeAdmin();
     loadItemsData();
     loadPendingItems();
+    loadSoldItems();
     setupEventListeners();
     renderItems();
 });
@@ -97,6 +98,12 @@ function setupEventListeners() {
             renderUsers();
         });
     }
+
+    // sold list search and filter
+    const soldSearchInput = document.getElementById('soldSearchInput');
+    if (soldSearchInput) soldSearchInput.addEventListener('input', () => renderSoldItems());
+    const soldDateFilter = document.getElementById('soldDateFilter');
+    if (soldDateFilter) soldDateFilter.addEventListener('change', () => renderSoldItems());
 }
 
 // SECTION NAVIGATION
@@ -134,6 +141,8 @@ function switchSection(sectionName) {
         renderItems();
     } else if (sectionName === 'validation') {
         loadPendingItems();
+    } else if (sectionName === 'sold') {
+        loadSoldItems();
     }
 }
 
@@ -182,6 +191,47 @@ async function loadItemsData() {
     }
 }
 
+// Load sold items for admin view
+async function loadSoldItems() {
+    try {
+        const res = await fetch('/api/admin/items/sold', { headers: { 'x-admin-id': ADMIN_ID } });
+        if (!res.ok) { console.warn('Failed to load sold items'); adminState.soldItems = []; renderSoldItems(); return; }
+        const body = await res.json();
+        adminState.soldItems = body.items || [];
+        renderSoldItems();
+    } catch (err) {
+        console.error('loadSoldItems error:', err);
+        adminState.soldItems = [];
+        renderSoldItems();
+    }
+}
+
+function renderSoldItems() {
+    const soldList = document.getElementById('soldList');
+    if (!soldList) return;
+    const query = document.getElementById('soldSearchInput')?.value.toLowerCase() || '';
+    const dateFilter = document.getElementById('soldDateFilter')?.value || '';
+
+    let items = adminState.soldItems || [];
+    if (query) items = items.filter(it => (it.name && it.name.toLowerCase().includes(query)) || (it.seller && it.seller.toLowerCase().includes(query)) || (it.buyer && it.buyer.toLowerCase().includes(query)));
+    if (dateFilter) {
+        const days = parseInt(dateFilter, 10);
+        const cutoff = Date.now() - days * 24*60*60*1000;
+        items = items.filter(it => new Date(it.createdAt).getTime() >= cutoff);
+    }
+
+    if (!items.length) {
+        soldList.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📦</div><h3>Tidak ada barang terjual</h3><p>Belum ada penjualan yang tercatat.</p></div>`;
+        return;
+    }
+
+    // Show only the design image (minimal card)
+    soldList.innerHTML = items.map(it => `
+        <div class="sold-card sold-card-design-only">
+            <div class="sold-card-thumb"><img src="${(it.images && it.images.length) ? it.images[0] : it.image || 'default-item.png'}" alt="design" onerror="this.src='default-item.png'"></div>
+        </div>
+    `).join('');
+}
 function loadItemsFromStorage() {
     if (window.auctionItems && Array.isArray(window.auctionItems)) {
         adminState.items = JSON.parse(JSON.stringify(window.auctionItems));
@@ -703,7 +753,7 @@ function renderPendingItems() {
 }
 
 function openValidationDetail(itemId) {
-    currentValidationItem = (adminState.pendingItems || []).find(item => item.id === itemId);
+    currentValidationItem = (adminState.pendingItems || []).find(item => item.id === itemId) || (adminState.soldItems || []).find(item => item.id === itemId);
     if (!currentValidationItem) return;
 
     const modal = document.getElementById('validationModal');
@@ -751,12 +801,22 @@ function openValidationDetail(itemId) {
         <div class="image-gallery">
             ${(currentValidationItem.images || []).map((img, idx) => `
                 <div class="gallery-item">
-                    <img src="${img}" alt="Foto ${idx + 1}">
+                    <img src="${img}" alt="Foto ${idx + 1}" onerror="this.src='https://images.unsplash.com/photo-1610701596007-11502861dcfa?w=600'">
                     <span>${idx + 1}</span>
                 </div>
             `).join('')}
         </div>
     `;
+
+    // If item is not pending, hide action buttons (no approve/reject)
+    const actions = modal.querySelector('.modal-actions');
+    if (actions) {
+        if (currentValidationItem.status !== 'pending') {
+            actions.querySelectorAll('button').forEach(b => { if (/(Terima|Tolak)/.test(b.textContent)) b.style.display = 'none'; });
+        } else {
+            actions.querySelectorAll('button').forEach(b => b.style.display = 'inline-block');
+        }
+    }
 
     modal.style.display = 'flex';
 }

@@ -934,6 +934,27 @@ body {
     overflow-y: auto;
 }
 
+/* Sold list styles */
+.sold-list {
+    display: grid;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+.sold-card {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+}
+.sold-card-thumb img { width: 120px; height: 90px; object-fit: cover; border-radius: 8px; }
+.sold-card-body h3 { margin: 0 0 6px 0; }
+.sold-meta { color: var(--text-muted); font-size: 13px; margin-bottom: 6px; }
+.sold-specs { color: var(--text-dark); font-weight: 600; }
+.sold-actions { margin-top: 8px; }
+
 .validation-details {
     background: var(--background);
     padding: 1rem;
@@ -945,6 +966,10 @@ body {
     margin-bottom: 1rem;
     color: var(--text-dark);
 }
+
+/* Design-only sold card */
+.sold-card-design-only { justify-content: center; padding: 8px; }
+.sold-card-design-only .sold-card-thumb img { width: 220px; height: 160px; border-radius: 6px; object-fit: cover; }
 
 .details-grid {
     display: grid;
